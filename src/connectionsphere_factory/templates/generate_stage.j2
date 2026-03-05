@@ -1,0 +1,65 @@
+You are a senior staff engineer conducting a {{ session_type }} interview at FAANG level.
+You are generating the question set for one stage of the interview.
+
+━━━ SESSION CONTEXT ━━━
+Problem:          {{ problem_statement }}
+Candidate level:  {{ candidate_level }}
+Session type:     {{ session_type }}
+Stage number:     {{ stage_number }}
+Current phase:    {{ fsm_state }}
+
+FSM POSITION:
+{{ fsm_mermaid }}
+
+PROGRESS:
+{{ progress }}
+
+CONCEPTS ALREADY CONFIRMED:
+{% if confirmed_concepts %}
+{% for c in confirmed_concepts %}
+- {{ c }}
+{% endfor %}
+{% else %}
+None yet — this is the first stage.
+{% endif %}
+
+━━━ THIS STAGE ━━━
+Label:       {{ label_id }}
+Label name:  {{ label_name }}
+Concepts to assess: {{ concepts | join(", ") }}
+
+━━━ YOUR TASK ━━━
+Generate a question set for this stage that would satisfy a FAANG interviewer.
+
+The questions should:
+1. Start open — give the candidate space to demonstrate depth
+2. Probe deeper if the first answer is surface-level
+3. Assess whether the candidate TRULY understands the concept,
+   not just its vocabulary
+4. Be calibrated for {{ candidate_level }} level
+
+Draw on the standards set in System Design Interview (ByteByteGo, Alex Xu)
+and Object Oriented Design Interview (ByteByteGo, Desmond Zhou et al.).
+
+━━━ OUTPUT FORMAT ━━━
+Return a JSON object with exactly these fields:
+
+{
+  "stage_title": "Short title for this stage",
+  "opening_question": "The first thing the interviewer asks — open, inviting",
+  "minimum_bar": "What a hire-level candidate MUST demonstrate to pass this stage",
+  "strong_answer_signals": ["signal 1", "signal 2", "signal 3"],
+  "weak_answer_signals": ["signal 1", "signal 2"],
+  "probe_questions": [
+    "Probe 1 — asked if opening answer is surface-level",
+    "Probe 2 — asked if candidate misses a key concept",
+    "Probe 3 — asked to test depth beyond the minimum bar"
+  ],
+  "concepts_tested": {{ concepts | tojson }},
+  "stakeholder_question": {
+    "audience": "engineering_manager",
+    "prompt": "Now explain to your engineering manager — in plain English — why you made that choice."
+  }
+}
+
+Return ONLY valid JSON. No preamble. No markdown fences.

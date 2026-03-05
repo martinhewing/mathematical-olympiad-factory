@@ -1,0 +1,27 @@
+[Unit]
+Description=ConnectionSphere Factory
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/app
+EnvironmentFile=/app/.env
+
+ExecStart=/home/deploy/.local/bin/uv run uvicorn connectionsphere_factory.app:app \
+    --host 0.0.0.0 \
+    --port 8391 \
+    --workers 2 \
+    --access-log
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=factory
+
+[Install]
+WantedBy=multi-user.target

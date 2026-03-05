@@ -29,7 +29,7 @@ cp .env.example .env
 # Edit .env — set the three required keys (see Configuration below)
 
 # 4. Run
-uv run uvicorn factory.app:app --reload --port 8391
+uv run uvicorn connectionsphere_factory.app:app --reload --port 8391
 ```
 
 Open **http://localhost:8391/docs**
@@ -68,7 +68,7 @@ uv run pytest -m unit           # fast, isolated — run while editing (~4s)
 uv run pytest -m integration    # engine and store wired together
 uv run pytest -m e2e            # full HTTP flows
 uv run pytest -m smoke          # post-deploy sanity (<10s)
-uv run pytest --cov=factory     # with coverage report
+uv run pytest --cov=connectionsphere_factory
 ```
 
 **Lint and format**
@@ -91,20 +91,20 @@ docker run -p 8391:8391 --env-file .env factory
 
 Merge to `main`. CI runs, then deploys automatically via GitHub Actions.
 
-For first-time server provisioning: `deploy/provision.sh`  
+For first-time server provisioning: `deploy/provision.sh`
 For operational reference: `docs/runbook.md`
 
 ---
 
 ## Stack
 
-| Layer | Tool |
-|---|---|
-| API | FastAPI + Scalar |
-| AI | Anthropic Claude |
-| Voice | Cartesia TTS + Deepgram STT |
-| State | FSM + Doubly Linked List (session history) |
+| Layer   | Tool                                      |
+|---------|-------------------------------------------|
+| API     | FastAPI + Scalar                          |
+| AI      | Anthropic Claude                          |
+| Voice   | Cartesia TTS + Deepgram STT               |
+| State   | FSM + Doubly Linked List (session history)|
 | Storage | PostgreSQL + Redis + Digital Ocean Spaces |
-| Build | UV + Docker |
-| CI/CD | GitHub Actions |
-| Host | Digital Ocean VPS |
+| Build   | UV + Docker                               |
+| CI/CD   | GitHub Actions                            |
+| Host    | Digital Ocean VPS                         |
