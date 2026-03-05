@@ -43,7 +43,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         duration_ms = int((time.perf_counter() - start) * 1000)
         level = "warning" if response.status_code >= 400 else "info"
-        log.msg(
+        log.info(
             "http.request",
             status_code = response.status_code,
             duration_ms = duration_ms,
