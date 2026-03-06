@@ -10,9 +10,10 @@ Middleware order — Starlette applies last-registered-first:
 
 from __future__ import annotations
 
+import pathlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -108,6 +109,14 @@ def create_app() -> FastAPI:
 
     app.openapi = custom_openapi
 
+    # ── Favicon (public) ──────────────────────────────────────────────────
+    _favicon = pathlib.Path(__file__).parent / "static" / "favicon.png"
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    @app.get("/favicon.png", include_in_schema=False)
+    async def favicon():
+        return Response(content=_favicon.read_bytes(), media_type="image/png")
+
     # ── Scalar docs (public) ──────────────────────────────────────────────
     @app.get("/docs", include_in_schema=False)
     def scalar_docs():
@@ -158,12 +167,102 @@ def _scalar_html(title: str) -> str:
   <title>{title}</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; }}
+    html, body {{ margin: 0; padding: 0; background: #0a0a0a; }}
+
+    /* ── Scalar CSS variable overrides ─────────────────────────── */
+    :root,
+    .light-mode,
+    .dark-mode,
+    [data-theme],
+    .scalar-app {{
+      --scalar-color-1:                        #f0f0f0 !important;
+      --scalar-color-2:                        #999999 !important;
+      --scalar-color-3:                        #555555 !important;
+      --scalar-color-accent:                   #c8ff00 !important;
+      --scalar-background-1:                   #0a0a0a !important;
+      --scalar-background-2:                   #111111 !important;
+      --scalar-background-3:                   #1a1a1a !important;
+      --scalar-background-4:                   #222222 !important;
+      --scalar-border-color:                   #222222 !important;
+      --scalar-button-1:                       #c8ff00 !important;
+      --scalar-button-1-color:                 #000000 !important;
+      --scalar-button-1-hover:                 #d4ff33 !important;
+      --scalar-color-green:                    #00ff88 !important;
+      --scalar-color-red:                      #ff4444 !important;
+      --scalar-color-orange:                   #ffaa00 !important;
+      --scalar-color-yellow:                   #ffaa00 !important;
+      --scalar-color-blue:                     #6699ff !important;
+      --scalar-color-purple:                   #c8ff00 !important;
+      --scalar-sidebar-background-1:           #0a0a0a !important;
+      --scalar-sidebar-background-2:           #111111 !important;
+      --scalar-sidebar-item-hover-background:  #1a1a1a !important;
+      --scalar-sidebar-item-active-background: #1a1a1a !important;
+      --scalar-sidebar-color-1:                #f0f0f0 !important;
+      --scalar-sidebar-color-2:                #666666 !important;
+      --scalar-sidebar-color-active:           #c8ff00 !important;
+      --scalar-sidebar-border-color:           #1a1a1a !important;
+      --scalar-sidebar-search-background:      #111111 !important;
+      --scalar-font:                           'DM Sans', sans-serif !important;
+      --scalar-font-code:                      'DM Mono', monospace !important;
+    }}
+
+    /* Title */
+    h1 {{ color: #c8ff00 !important; }}
+
+    /* Force dark background on scalar root elements */
+    .scalar-app,
+    .references-layout,
+    .references-navigation,
+    .scalar-api-reference {{
+      background: #0a0a0a !important;
+      color: #f0f0f0 !important;
+      font-family: 'DM Sans', sans-serif !important;
+    }}
+
+    /* Sidebar */
+    .sidebar,
+    .t-doc__sidebar {{
+      background: #0a0a0a !important;
+      border-right: 1px solid #222 !important;
+    }}
+
+    /* Active nav item accent */
+    .sidebar-item--active,
+    .sidebar-item.active {{
+      color: #c8ff00 !important;
+      border-left-color: #c8ff00 !important;
+    }}
+
+    /* Code blocks */
+    .code-block, pre, code {{
+      background: #111111 !important;
+      font-family: 'DM Mono', monospace !important;
+    }}
+
+    /* Buttons */
+    .btn-primary, .scalar-button-primary {{
+      background: #c8ff00 !important;
+      color: #000 !important;
+    }}
+
+    /* Method badges */
+    .badge-get    {{ background: rgba(102,153,255,0.15) !important; color: #6699ff !important; }}
+    .badge-post   {{ background: rgba(0,255,136,0.12)  !important; color: #00ff88 !important; }}
+    .badge-put    {{ background: rgba(255,170,0,0.12)  !important; color: #ffaa00 !important; }}
+    .badge-delete {{ background: rgba(255,68,68,0.12)  !important; color: #ff4444 !important; }}
+  </style>
 </head>
 <body>
   <script
     id="api-reference"
     data-url="/openapi.json"
-    data-configuration='{{"theme":"purple","layout":"modern","defaultHttpClient":{{"targetKey":"python","clientKey":"requests"}}}}'
+    data-configuration='{{"theme":"none","layout":"modern","darkMode":true,"defaultHttpClient":{{"targetKey":"python","clientKey":"requests"}}}}'
   ></script>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>

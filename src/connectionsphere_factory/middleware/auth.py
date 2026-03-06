@@ -17,6 +17,7 @@ from connectionsphere_factory.config import get_settings
 _PUBLIC_PATHS = frozenset({
     "/health",
     "/favicon.ico",
+        "/favicon.png",
     "/docs",
     "/openapi.json",
     "/",
