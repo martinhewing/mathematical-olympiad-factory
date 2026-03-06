@@ -1,191 +1,11 @@
-"""
-connectionsphere_factory/routes/voice.py
-Voice endpoints — Cartesia TTS + STT.
-"""
-from __future__ import annotations
-from pathlib import Path
+#!/usr/bin/env bash
+# interview_page.sh
+# Adds GET /session/{id}/interview — the candidate-facing interview UI
+# Run from inside connectionsphere_factory/
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import Response, HTMLResponse
+set -euo pipefail
 
-from connectionsphere_factory.engine import session_engine as engine
-from connectionsphere_factory.logging import get_logger
-from connectionsphere_factory.voice.tts import generate_tts, audio_path
-from connectionsphere_factory.voice.stt import transcribe
-import connectionsphere_factory.session_store as store
-
-router = APIRouter(tags=["voice"])
-log    = get_logger(__name__)
-
-
-def _stage_text(session_id: str, stage_n: int) -> str:
-    spec       = engine.get_or_generate_stage(session_id, stage_n)
-    scene_data = store.load_field(session_id, "scene") or {}
-    scene      = scene_data.get("scene", "")
-    question   = spec.get("opening_question", "")
-    return "  ".join(p for p in [scene, question] if p)
-
-
-@router.get("/session/{session_id}/stage/{stage_n}/audio/file")
-async def get_stage_audio_file(session_id: str, stage_n: int):
-    """Return raw WAV bytes for this stage (inline playback)."""
-    if not store.exists(session_id):
-        raise HTTPException(status_code=404, detail="Session not found")
-    savepath = audio_path(session_id, stage_n)
-    if not Path(savepath).exists():
-        text = _stage_text(session_id, stage_n)
-        await generate_tts(text, save_path=savepath)
-    return Response(
-        content    = Path(savepath).read_bytes(),
-        media_type = "audio/wav",
-        headers    = {"Content-Disposition": "inline"},
-    )
-
-
-@router.get("/session/{session_id}/stage/{stage_n}/play",
-            response_class=HTMLResponse)
-async def play_stage_audio(session_id: str, stage_n: int):
-    """
-    Auto-playing audio tab.
-
-    Opens in a new tab, plays the interviewer audio immediately,
-    and closes itself when playback finishes. No interaction required.
-    """
-    if not store.exists(session_id):
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    # Pre-generate audio so playback starts immediately
-    savepath = audio_path(session_id, stage_n)
-    if not Path(savepath).exists():
-        text = _stage_text(session_id, stage_n)
-        await generate_tts(text, save_path=savepath)
-
-    audio_url = f"/session/{session_id}/stage/{stage_n}/audio/file"
-
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Interviewer — Stage {stage_n}</title>
-  <style>
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{
-      background: #0a0a0a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: monospace;
-      color: #94a3b8;
-      font-size: 0.8rem;
-      letter-spacing: 0.05em;
-    }}
-    .pulse {{
-      width: 8px; height: 8px;
-      background: #6366f1;
-      border-radius: 50%;
-      margin-right: 10px;
-      animation: pulse 1s ease-in-out infinite;
-    }}
-    @keyframes pulse {{
-      0%, 100% {{ opacity: 1; transform: scale(1); }}
-      50%       {{ opacity: 0.4; transform: scale(0.8); }}
-    }}
-  </style>
-</head>
-<body>
-  <div class="pulse" id="dot"></div>
-  <span id="status">INTERVIEWER SPEAKING</span>
-  <audio id="audio" autoplay>
-    <source src="{audio_url}" type="audio/wav">
-  </audio>
-  <script>
-    const audio  = document.getElementById('audio');
-    const status = document.getElementById('status');
-    const dot    = document.getElementById('dot');
-
-    audio.addEventListener('ended', () => {{
-      status.textContent = 'DONE';
-      dot.style.animation = 'none';
-      dot.style.background = '#334155';
-      setTimeout(() => window.close(), 600);
-    }});
-
-    audio.addEventListener('error', () => {{
-      status.textContent = 'AUDIO ERROR';
-      setTimeout(() => window.close(), 2000);
-    }});
-  </script>
-</body>
-</html>"""
-
-
-
-
-@router.post("/session/{session_id}/speak")
-async def speak_text(session_id: str, payload: dict):
-    """
-    Convert arbitrary text to speech and return WAV audio.
-    Used by the interview UI to speak probe questions and feedback.
-    """
-    if not store.exists(session_id):
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    speak_text = payload.get("text", "").strip()
-    if not speak_text:
-        raise HTTPException(status_code=422, detail="No text provided")
-
-    import tempfile, os
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-        tmp = f.name
-    try:
-        await generate_tts(speak_text, save_path=tmp)
-        audio = Path(tmp).read_bytes()
-    finally:
-        if os.path.exists(tmp): os.unlink(tmp)
-
-    return Response(
-        content    = audio,
-        media_type = "audio/wav",
-        headers    = {"Content-Disposition": "inline"},
-    )
-
-@router.post("/session/{session_id}/stage/{stage_n}/voice")
-async def submit_voice_answer(
-    session_id: str,
-    stage_n:    int,
-    audio:      UploadFile = File(...),
-):
-    """
-    Submit spoken answer. Transcribes via Cartesia STT → Claude assessment.
-    Returns same JSON as text submit + transcript field.
-    """
-    if not store.exists(session_id):
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    audio_bytes  = await audio.read()
-    content_type = audio.content_type or "audio/wav"
-
-    if len(audio_bytes) < 1000:
-        raise HTTPException(status_code=422, detail="Audio too short")
-
-    transcript = await transcribe(audio_bytes, content_type=content_type)
-
-    if len(transcript.strip()) < 10:
-        raise HTTPException(
-            status_code=422,
-            detail="We couldn't hear that clearly. Check your microphone is connected and try again — speak for at least 3 seconds.",
-        )
-
-    assessment = engine.process_submission(
-        session_id = session_id,
-        stage_n    = stage_n,
-        answer     = transcript,
-    )
-    # Convert Pydantic model or dict to plain dict
-    if hasattr(assessment, "model_dump"):
-        assessment = assessment.model_dump()
-    return {**assessment, "transcript": transcript, "input_mode": "voice"}
+cat >> src/connectionsphere_factory/routes/voice.py << 'PYEOF'
 
 
 @router.get("/session/{session_id}/interview", response_class=HTMLResponse)
@@ -1001,44 +821,6 @@ async function submitAudio() {{
 }}
 
 // ── Render assessment ────────────────────────────────────────────
-
-async function speakResponse(spokenText) {{
-  if (!spokenText) return;
-  const dot   = document.getElementById('speaking-dot');
-  const fill  = document.getElementById('audio-fill');
-  const label = document.getElementById('audio-label');
-  const audio = document.getElementById('stage-audio');
-
-  dot.className = 'speaking-dot active';
-  label.textContent = '▶ response';
-
-  try {{
-    const res  = await fetch(`/session/${{SESSION_ID}}/speak`, {{
-      method:  'POST',
-      headers: {{'Content-Type': 'application/json'}},
-      body:    JSON.stringify({{ text: spokenText }}),
-    }});
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    audio.src  = url;
-    audio.addEventListener('timeupdate', () => {{
-      if (audio.duration) {{
-        fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
-        label.textContent = Math.ceil(audio.duration - audio.currentTime) + 's';
-      }}
-    }});
-    audio.addEventListener('ended', () => {{
-      dot.className = 'speaking-dot';
-      label.textContent = '✓ done';
-      URL.revokeObjectURL(url);
-    }}, {{ once: true }});
-    await audio.play();
-  }} catch(e) {{
-    dot.className = 'speaking-dot';
-    label.textContent = '—';
-  }}
-}}
-
 function renderAssessment(a) {{
   const panel   = document.getElementById('assessment');
   const verdict = a.verdict || 'NOT_MET';
@@ -1080,10 +862,6 @@ function renderAssessment(a) {{
 
   panel.innerHTML   = html;
   panel.className   = 'assessment visible';
-  const toSpeak = (verdict === 'PARTIAL' && a.probe) ? a.probe : (a.feedback || '').split('.').slice(0,2).join('.') + '.';
-  speakResponse(toSpeak);
-
-
   document.getElementById('record-hint').textContent = '';
   showStatus('');
 }}
@@ -1126,3 +904,13 @@ loadStage(1);
 </script>
 </body>
 </html>"""
+PYEOF
+
+echo "Done. Add to auth public prefix list and restart."
+
+# Also add /session/ interview to public paths (already covered by /session/ prefix)
+echo "Interview page added to routes/voice.py"
+echo ""
+echo "Test it:"
+echo "  Create a session → note session_id"
+echo "  Open: http://localhost:8391/session/{session_id}/interview"

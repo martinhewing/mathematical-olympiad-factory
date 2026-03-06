@@ -1,49 +1,52 @@
 """
 connectionsphere_factory/voice/stt.py
-
-Cartesia STT — transcribes candidate audio to text.
-
-Accepts raw audio bytes (WAV/WebM/OGG from browser MediaRecorder).
-Returns transcript string for passing to process_submission().
+Cartesia STT — ink-whisper, audio bytes → transcript.
 """
 from __future__ import annotations
-
+import io
+import subprocess
+import tempfile
+import os
 from cartesia import AsyncCartesia
-
 from connectionsphere_factory.config import get_settings
 from connectionsphere_factory.logging import get_logger
 
 log = get_logger(__name__)
 
 
-async def transcribe(audio_bytes: bytes, content_type: str = "audio/wav") -> str:
-    """
-    Transcribe audio bytes to text using Cartesia ink-whisper.
+def _to_wav(audio_bytes: bytes) -> bytes:
+    """Convert any browser audio (WebM/OGG) to 16kHz mono WAV via ffmpeg."""
+    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
+        f.write(audio_bytes)
+        in_path = f.name
+    out_path = in_path.replace(".webm", ".wav")
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", in_path, "-ar", "16000", "-ac", "1", out_path],
+            check=True, capture_output=True,
+        )
+        return open(out_path, "rb").read()
+    finally:
+        for p in (in_path, out_path):
+            if os.path.exists(p): os.unlink(p)
 
-    Args:
-        audio_bytes:  Raw audio from browser (WAV, WebM, OGG)
-        content_type: MIME type of the audio
 
-    Returns:
-        Transcript string
-    """
+async def transcribe(audio_bytes: bytes, content_type: str = "audio/webm") -> str:
     settings = get_settings()
-
     if not settings.cartesia_api_key:
         raise RuntimeError("CARTESIA_API_KEY is not set in .env")
 
-    log.info("stt.transcribe.start",
-             bytes=len(audio_bytes),
-             model=settings.cartesia_stt_model,
-             content_type=content_type)
+    log.info("stt.transcribe.start", bytes=len(audio_bytes))
+
+    wav_bytes  = _to_wav(audio_bytes)
+    audio_file = ("answer.wav", io.BytesIO(wav_bytes), "audio/wav")
 
     async with AsyncCartesia(api_key=settings.cartesia_api_key) as client:
         response = await client.stt.transcribe(
-            model_id    = settings.cartesia_stt_model,
-            audio       = audio_bytes,
-            language    = "en",
+            model = "ink-whisper",
+            file  = audio_file,
         )
 
-    transcript = response.transcript or ""
+    transcript = getattr(response, "text", None) or getattr(response, "transcript", None) or ""
     log.info("stt.transcribe.complete", chars=len(transcript))
     return transcript.strip()
