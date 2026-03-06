@@ -1,14 +1,10 @@
 """
 connectionsphere_factory/config.py
-
 Settings — reads from environment / .env file.
 All security defaults are the restrictive option.
 """
-
 from __future__ import annotations
-
 from functools import lru_cache
-
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,6 +26,9 @@ class Settings(BaseSettings):
     # ── Cartesia ──────────────────────────────────────────────────────────
     cartesia_api_key:  str = ""
     cartesia_voice_id: str = "a0e99841-438c-4a64-b679-ae501e7d6091"
+    cartesia_model:    str = "sonic-3"
+    cartesia_stt_model: str = "ink-whisper"
+    audio_storage_dir: str = "/tmp/connectionsphere_audio"
 
     # ── App ───────────────────────────────────────────────────────────────
     app_host:        str  = "127.0.0.1"

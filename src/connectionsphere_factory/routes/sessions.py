@@ -1,4 +1,8 @@
-"""connectionsphere_factory/routes/sessions.py"""
+"""
+connectionsphere_factory/routes/sessions.py
+
+Session management — pure JSON.
+"""
 
 from fastapi import APIRouter, HTTPException
 
@@ -11,6 +15,16 @@ router = APIRouter(tags=["sessions"])
 
 @router.post("/sessions", response_model=SessionResponse, status_code=201)
 def create_session(req: CreateSessionRequest):
+    """
+    Start a new interview session.
+
+    Claude generates an opening scene based on your `problem_statement`.
+    The FSM advances to **Requirements Gathering** — the candidate's starting point.
+
+    Once created, open `stage_url` to begin the interview.
+
+    **candidate_level** options: `junior` | `senior` | `staff` | `principal`
+    """
     session_id = engine.create_session(
         problem_statement = req.problem_statement,
         candidate_name    = req.candidate_name,
@@ -29,6 +43,9 @@ def create_session(req: CreateSessionRequest):
 
 @router.get("/session/{session_id}")
 def get_session(session_id: str):
+    """
+    Full session detail — scene, FSM state, and candidate metadata.
+    """
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -43,6 +60,8 @@ def get_session(session_id: str):
         "problem_statement": store.load_field(session_id, "problem_statement"),
         "scene":             scene.get("scene", ""),
         "primary_tension":   scene.get("primary_tension", ""),
+        "deliberate_omissions": scene.get("deliberate_omissions", []),
+        "strong_opening_move":  scene.get("strong_opening_move", ""),
         "created_at":        created,
         **state,
     }
@@ -50,6 +69,9 @@ def get_session(session_id: str):
 
 @router.get("/sessions")
 def list_sessions():
+    """
+    List all active sessions.
+    """
     sessions = []
     for sid in store.all_sessions():
         state = engine.get_state(sid)
@@ -61,4 +83,4 @@ def list_sessions():
                 "fsm_state":         state["fsm_state"],
                 "phase":             state["phase"],
             })
-    return {"sessions": sessions}
+    return {"sessions": sessions, "count": len(sessions)}

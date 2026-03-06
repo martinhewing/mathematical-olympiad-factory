@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from connectionsphere_factory.config import get_settings
@@ -21,7 +22,7 @@ from connectionsphere_factory.logging import configure_logging, get_logger
 from connectionsphere_factory.middleware.auth import APIKeyMiddleware
 from connectionsphere_factory.middleware.rate_limit import RateLimitMiddleware
 from connectionsphere_factory.middleware.request_logging import RequestLoggingMiddleware
-from connectionsphere_factory.routes import sessions, stages, state, visualize
+from connectionsphere_factory.routes import sessions, stages, state, visualize, voice
 
 
 @asynccontextmanager
@@ -41,12 +42,25 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title    = "ConnectionSphere — System Design Factory",
-        version  = "0.1.0",
-        lifespan = lifespan,
-        docs_url = None,
-        redoc_url= None,
-        debug    = settings.debug,
+        title       = "ConnectionSphere — System Design Factory",
+        version     = "0.1.0",
+        description = (
+            "FAANG-level system design interview simulator.\n\n"
+            "## Quick start\n"
+            "1. **Authenticate** — enter your `FACTORY_API_KEY` in the auth panel above\n"
+            "2. **Create a session** — `POST /sessions` with a problem statement\n"
+            "3. **Read the scene** — note the `session_id` and `stage_url` returned\n"
+            "4. **Get stage 1** — `GET /session/{session_id}/stage/1` — read the opening question\n"
+            "5. **Submit your answer** — `POST /session/{session_id}/stage/1/submit`\n"
+            "6. **Follow `next_url`** — advance through stages until `evaluate`\n\n"
+            "---\n"
+            "The interviewer sets the scene. You ask clarifying questions. "
+            "Claude assesses your answers and probes until concepts are confirmed."
+        ),
+        lifespan    = lifespan,
+        docs_url    = None,
+        redoc_url   = None,
+        debug       = settings.debug,
     )
 
     # ── Middleware (registered last → runs first) ─────────────────────────
@@ -69,6 +83,30 @@ def create_app() -> FastAPI:
     app.include_router(stages.router)
     app.include_router(state.router)
     app.include_router(visualize.router)
+    app.include_router(voice.router)
+
+    # ── OpenAPI — declare X-API-Key security scheme ───────────────────────
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title       = app.title,
+            version     = app.version,
+            description = app.description,
+            routes      = app.routes,
+        )
+        schema["components"]["securitySchemes"] = {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in":   "header",
+                "name": "X-API-Key",
+            }
+        }
+        schema["security"] = [{"ApiKeyAuth": []}]
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi
 
     # ── Scalar docs (public) ──────────────────────────────────────────────
     @app.get("/docs", include_in_schema=False)
