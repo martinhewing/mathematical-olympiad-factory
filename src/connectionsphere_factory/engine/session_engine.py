@@ -16,6 +16,7 @@ from connectionsphere_factory.logging import get_logger
 from connectionsphere_factory.domain.conversation.history import FactoryConversationHistory
 from connectionsphere_factory.domain.fsm.machine import FactoryFSM
 from connectionsphere_factory.domain.fsm.states import State
+from connectionsphere_factory.domain.agents import get_agent_for_state
 from connectionsphere_factory.engine.prompt_renderer import render_and_call
 from connectionsphere_factory.models.schemas import AssessmentResponse, CandidateLevel
 import connectionsphere_factory.session_store as store
@@ -38,10 +39,6 @@ def create_session(
     dll = FactoryConversationHistory()
 
     fsm.transition_to(State.TEACH,        trigger="session_created")
-    fsm.transition_to(State.TEACH_CHECK,  trigger="auto_teach_pass")
-    fsm.transition_to(State.REQUIREMENTS, trigger="auto_teach_pass")
-    dll.add_stage("teach_001",       "teach").confirm({})
-    dll.add_stage("teach_check_001", "teach_check").confirm({})
     node = dll.add_stage("requirements_001", "requirements")
 
     scene_data = _generate_scene(problem_statement, candidate_level.value)
@@ -54,7 +51,18 @@ def create_session(
     store.save_field(session_id, "created_at",        datetime.now().isoformat())
     store.save_field(session_id, "stage_specs",       {})
     store.save_field(session_id, "stage_assessments", {})
+
+    # Fix: add teach stage to dll so get_or_generate_stage works correctly
+    dll = FactoryConversationHistory()
+    dll.add_stage("teach_001", "teach")
     store.save(session_id, fsm, dll)
+
+    # Pre-generate lesson so interview page loads instantly
+    try:
+        get_or_generate_stage(session_id, 1)
+        log.info("session.lesson_pregenerated", session_id=session_id)
+    except Exception as e:
+        log.warning("session.lesson_pregenerate_failed", session_id=session_id, error=str(e))
 
     log.info(
         "session.created",
@@ -81,19 +89,24 @@ def get_or_generate_stage(session_id: str, stage_n: int) -> dict[str, Any]:
         store.load_field(session_id, "problem_statement") or "", stage_n
     )
 
-    spec = render_and_call("generate_stage.j2", {
-        "problem_statement":  store.load_field(session_id, "problem_statement"),
-        "candidate_level":    store.load_field(session_id, "candidate_level"),
-        "session_type":       "system_design",
-        "stage_number":       stage_n,
-        "fsm_state":          fsm.state.value,
-        "fsm_mermaid":        fsm.mermaid(),
-        "progress":           fsm.context.progress_summary,
-        "confirmed_concepts": dll.confirmed_labels,
-        "label_id":           label_id,
-        "label_name":         label_name,
-        "concepts":           concepts,
-    })
+    from connectionsphere_factory.domain.fsm.states import State as _State
+    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}
+    template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"
+    ctx = {
+        "problem_statement":    store.load_field(session_id, "problem_statement"),
+        "candidate_level":      store.load_field(session_id, "candidate_level"),
+        "candidate_first_name": store.load_field(session_id, "candidate_first_name") or "there",
+        "session_type":         "system_design",
+        "stage_number":         stage_n,
+        "fsm_state":            fsm.state.value,
+        "fsm_mermaid":          fsm.mermaid(),
+        "progress":             fsm.context.progress_summary,
+        "confirmed_concepts":   dll.confirmed_labels,
+        "label_id":             label_id,
+        "label_name":           label_name,
+        "concepts":             concepts,
+    }
+    spec = render_and_call(template, ctx)
 
     specs[str(stage_n)] = spec
     store.save_field(session_id, "stage_specs", specs)
@@ -151,6 +164,49 @@ def process_submission(
             next_url          = f"/session/{session_id}/flagged",
             session_complete  = False,
         )
+
+    # ── TEACH phase — run comprehension check then advance to REQUIREMENTS ──
+    if fsm.state in {State.TEACH, State.TEACH_CHECK}:
+        spec       = get_or_generate_stage(session_id, stage_n)
+        first_name = store.load_field(session_id, "candidate_first_name") or "there"
+        check_result = render_and_call("teach_check.j2", {
+            "problem_statement": store.load_field(session_id, "problem_statement"),
+            "candidate_first_name": first_name,
+            "candidate_answer":  answer,
+            "lesson_summary":    spec.get("ready_summary", ""),
+        })
+        understood = check_result.get("advance_to_simulation", False)
+        feedback   = check_result.get("feedback", "")
+        if understood:
+            fsm.transition_to(State.TEACH_CHECK,  trigger="comprehension_confirmed")
+            fsm.transition_to(State.REQUIREMENTS, trigger="teach_complete")
+            dll.current.confirm({})
+            dll.add_stage("teach_check_001", "teach_check").confirm({})
+            dll.add_stage("requirements_001", "requirements")
+            store.save_field(session_id, "stage_specs", {})  # clear cached specs
+            store.save(session_id, fsm, dll)
+            return AssessmentResponse(
+                verdict               = "CONFIRMED",
+                feedback              = feedback,
+                probe                 = None,
+                concepts_demonstrated = ["teach_complete"],
+                concepts_missing      = [],
+                next_url              = f"/session/{session_id}/stage/{stage_n + 1}",
+                session_complete      = False,
+            )
+        else:
+            gap     = check_result.get("reteach", "")
+            fsm.transition_to(State.TEACH_CHECK, trigger="comprehension_partial")
+            store.save(session_id, fsm, dll)
+            return AssessmentResponse(
+                verdict               = "PARTIAL",
+                feedback              = feedback,
+                probe                 = gap or check_result.get("comprehension_check", ""),
+                concepts_demonstrated = [],
+                concepts_missing      = [check_result.get("gap_concept", "")],
+                next_url              = f"/session/{session_id}/stage/{stage_n}",
+                session_complete      = False,
+            )
 
     spec          = get_or_generate_stage(session_id, stage_n)
     probe_history = [
@@ -290,6 +346,8 @@ def get_state(session_id: str) -> dict[str, Any] | None:
         "current_node":        fsm.context.current_node_id,
         "current_label":       fsm.context.current_node_label,
         "progress":            fsm.context.progress_summary,
+        "agent_name":          get_agent_for_state(fsm.state.value).display_name,
+        "agent_role":          get_agent_for_state(fsm.state.value).role_label,
     }
 
 

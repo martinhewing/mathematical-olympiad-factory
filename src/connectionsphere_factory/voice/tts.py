@@ -25,7 +25,7 @@ def _settings():
     return get_settings()
 
 
-async def generate_tts(text: str, save_path: str) -> bytes:
+async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -> bytes:
     """Generate TTS audio and save to disk. Returns raw bytes."""
     settings = _settings()
     log.info("tts.generate.start", chars=len(text), model=settings.cartesia_model)
@@ -37,7 +37,7 @@ async def generate_tts(text: str, save_path: str) -> bytes:
         response = await client.tts.generate(
             model_id      = settings.cartesia_model,
             transcript    = text,
-            voice         = {"mode": "id", "id": settings.cartesia_voice_id},
+            voice         = {"mode": "id", "id": voice_id or settings.cartesia_voice_id},
             output_format = _OUTPUT_FORMAT,
         )
         await response.write_to_file(str(path))
@@ -47,14 +47,14 @@ async def generate_tts(text: str, save_path: str) -> bytes:
     return audio
 
 
-async def stream_tts(text: str) -> AsyncGenerator[bytes, None]:
+async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[bytes, None]:
     """Generate TTS and yield the full WAV in one chunk."""
     settings = _settings()
     import tempfile, os
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
-        audio = await generate_tts(text, save_path=tmp)
+        audio = await generate_tts(text, save_path=tmp, voice_id=voice_id)
         yield audio
     finally:
         try:

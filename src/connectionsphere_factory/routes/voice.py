@@ -18,12 +18,32 @@ router = APIRouter(tags=["voice"])
 log    = get_logger(__name__)
 
 
-def _stage_text(session_id: str, stage_n: int) -> str:
+def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
+    from connectionsphere_factory.domain.agents import get_agent_for_state
+    from connectionsphere_factory.config import get_settings as _settings
     spec       = engine.get_or_generate_stage(session_id, stage_n)
-    scene_data = store.load_field(session_id, "scene") or {}
-    scene      = scene_data.get("scene", "")
-    question   = spec.get("opening_question", "")
-    return "  ".join(p for p in [scene, question] if p)
+    state_data = engine.get_state(session_id) or {}
+    fsm_state  = state_data.get("fsm_state", "")
+    agent      = get_agent_for_state(fsm_state)
+    voice_id   = agent.voice_id(_settings())
+    first_name = store.load_field(session_id, "candidate_first_name") or "there"
+    # Teach phase: use lesson greeting + lesson content
+    if fsm_state in {"Teach", "Teach Comprehension Check"}:
+        greeting = agent.greeting(first_name)
+        lesson   = spec.get("greeting", "")
+        concepts = spec.get("concepts", [])
+        concept_text = "  ".join(
+            f"{c.get('name','')}: {c.get('explanation','')}  For example: {c.get('example','')}"
+            for c in concepts[:3]
+        )
+        check = spec.get("comprehension_check", "")
+        parts = [p for p in [greeting, lesson, concept_text, check] if p]
+    else:
+        scene_data = store.load_field(session_id, "scene") or {}
+        scene      = scene_data.get("scene", "")
+        question   = spec.get("opening_question", "")
+        parts      = [p for p in [scene, question] if p]
+    return ("  ".join(parts), voice_id)
 
 
 @router.get("/session/{session_id}/stage/{stage_n}/audio/file")
@@ -33,8 +53,8 @@ async def get_stage_audio_file(session_id: str, stage_n: int):
         raise HTTPException(status_code=404, detail="Session not found")
     savepath = audio_path(session_id, stage_n)
     if not Path(savepath).exists():
-        text = _stage_text(session_id, stage_n)
-        await generate_tts(text, save_path=savepath)
+        text, voice_id = _stage_text(session_id, stage_n)
+        await generate_tts(text, save_path=savepath, voice_id=voice_id)
     return Response(
         content    = Path(savepath).read_bytes(),
         media_type = "audio/wav",
@@ -57,8 +77,8 @@ async def play_stage_audio(session_id: str, stage_n: int):
     # Pre-generate audio so playback starts immediately
     savepath = audio_path(session_id, stage_n)
     if not Path(savepath).exists():
-        text = _stage_text(session_id, stage_n)
-        await generate_tts(text, save_path=savepath)
+        text, voice_id = _stage_text(session_id, stage_n)
+        await generate_tts(text, save_path=savepath, voice_id=voice_id)
 
     audio_url = f"/session/{session_id}/stage/{stage_n}/audio/file"
 
@@ -139,7 +159,11 @@ async def speak_text(session_id: str, payload: dict):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
-        await generate_tts(speak_text, save_path=tmp)
+        req_voice = payload.get("voice_id", "")
+        from connectionsphere_factory.config import get_settings as _settings
+        cfg = _settings()
+        use_voice = cfg.cartesia_tutor_voice_id if req_voice == "ALEX_VOICE" else cfg.cartesia_voice_id
+        await generate_tts(speak_text, save_path=tmp, voice_id=use_voice)
         audio = Path(tmp).read_bytes()
     finally:
         if os.path.exists(tmp): os.unlink(tmp)
@@ -207,6 +231,9 @@ async def interview_page(session_id: str):
     problem = store.load_field(session_id, "problem_statement") or ""
     name    = store.load_field(session_id, "candidate_name") or "Candidate"
 
+    agent_name = state.get("agent_name", "Interviewer")
+    agent_role = state.get("agent_role", "INTERVIEWER")
+
     return HTMLResponse(content=_interview_html(
         session_id = session_id,
         problem    = problem,
@@ -214,10 +241,13 @@ async def interview_page(session_id: str):
         scene      = scene.get("scene", ""),
         fsm_state  = state["fsm_state"],
         phase      = state["phase"],
+        agent_name = agent_name,
+        agent_role = agent_role,
     ))
 
 
-def _interview_html(session_id, problem, name, scene, fsm_state, phase) -> str:
+def _interview_html(session_id, problem, name, scene, fsm_state, phase,
+                    agent_name="Interviewer", agent_role="INTERVIEWER") -> str:
     import json
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -357,6 +387,16 @@ html, body {{
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
+}}
+
+.panel-role {{
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.7;
+  margin-left: 6px;
 }}
 
 .speaking-dot {{
@@ -750,7 +790,8 @@ html, body {{
   <!-- Left: Interviewer -->
   <div class="left-panel">
     <div class="panel-header">
-      <span class="panel-label">Interviewer</span>
+      <span class="panel-label" id="agent-name-label">{agent_name}</span>
+      <span class="panel-role" id="agent-role-label">{agent_role}</span>
       <div class="speaking-dot" id="speaking-dot"></div>
     </div>
     <div class="scene-text" id="scene-text">{scene}</div>
@@ -761,6 +802,11 @@ html, body {{
         <div class="shimmer" style="width:80%;margin-bottom:8px"></div>
         <div class="shimmer" style="width:60%"></div>
       </div>
+    </div>
+    <div class="teach-actions" id="teach-actions" style="display:none;padding:12px 24px;border-top:1px solid var(--border);">
+      <button class="next-btn" id="ready-btn" onclick="handoverToJordan()" style="width:100%;text-align:center;">
+        Ready for interview →
+      </button>
     </div>
     <div class="audio-bar">
       <div class="audio-progress">
@@ -774,7 +820,10 @@ html, body {{
   <div class="right-panel">
     <div class="candidate-header">
       <span class="candidate-name">{name}</span>
-      <span class="stage-indicator" id="stage-indicator">Stage —</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="stage-indicator" id="stage-indicator">Stage —</span>
+        <button id="back-to-alex-btn" onclick="backToAlex()" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:3px 10px;border-radius:3px;cursor:pointer;">← Alex</button>
+      </div>
     </div>
 
     <div class="answer-area">
@@ -837,15 +886,39 @@ async function loadStage(n) {{
     const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);
     stageData  = await res.json();
 
-    // Show question
-    qt.innerHTML  = stageData.opening_question;
+    // Show question + scene based on phase
+    const isTeach = (stageData.phase === 'teach');
+    qt.innerHTML  = isTeach ? (stageData.comprehension_check || '') : (stageData.opening_question || '');
+    // Swap scene text: Alex's lesson during teach, Jordan's scenario during interview
+    const sceneEl = document.getElementById('scene-text');
+    if (isTeach && stageData.greeting) {{
+      const concepts = stageData.concepts || [];
+      const conceptHtml = concepts.length
+        ? '<ul style="margin-top:12px;padding-left:16px;">' + concepts.map(c => '<li style="margin-bottom:8px;">' + (c.name || c) + ': ' + (c.explanation || '') + '</li>').join('') + '</ul>'
+        : '';
+      sceneEl.innerHTML = '<strong>' + stageData.greeting + '</strong>' + conceptHtml;
+    }} else {{
+      sceneEl.textContent = stageData.scene || '';
+    }}
+    if (stageData.agent_name) {{ document.getElementById('agent-name-label').textContent = stageData.agent_name; document.getElementById('agent-role-label').textContent = stageData.agent_role || ''; }}
     qt.className  = 'question-text visible';
 
     // Update FSM badge
     document.getElementById('fsm-badge').textContent = stageData.fsm_state;
-
-    // Play audio
-    await playStageAudio(n);
+    // Show/hide teach vs interview UI
+    const teachActions = document.getElementById('teach-actions');
+    const backBtn = document.getElementById('back-to-alex-btn');
+    if (stageData.phase === 'teach') {{
+      teachActions.style.display = 'block';
+      backBtn.style.display = 'none';
+    }} else {{
+      teachActions.style.display = 'none';
+      backBtn.style.display = 'inline-block';
+    }}
+    // Enable record button immediately, audio plays in background
+    enableRecording();
+    // Play audio in background
+    playStageAudio(n);
 
   }} catch(e) {{
     qt.innerHTML = 'Failed to load stage. ' + e.message;
@@ -879,6 +952,7 @@ async function playStageAudio(n) {{
     fill.style.width = '100%';
     label.textContent = '✓ done';
     enableRecording();
+    enableRecording();
   }}, {{ once: true }});
 
   audio.addEventListener('error', () => {{
@@ -886,6 +960,12 @@ async function playStageAudio(n) {{
     label.textContent = 'no audio';
     enableRecording();
   }}, {{ once: true }});
+  const audioFallback = setTimeout(() => enableRecording(), 60000);
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'skip ›';
+  skipBtn.style.cssText = 'background:none;border:none;color:#666;font-size:11px;cursor:pointer;margin-left:8px;font-family:monospace;';
+  skipBtn.onclick = () => {{ audio.pause(); clearTimeout(audioFallback); dot.className='speaking-dot'; label.textContent='skipped'; enableRecording(); skipBtn.remove(); }};
+  const oldSkip = document.querySelector('.skip-btn'); if (oldSkip) oldSkip.remove(); skipBtn.className = 'skip-btn'; document.querySelector('.audio-bar').appendChild(skipBtn);
 
   try {{ await audio.play(); }} catch(e) {{
     // Autoplay blocked — enable recording immediately
@@ -981,7 +1061,11 @@ async function submitAudio() {{
   showStatus('Transcribing…');
 
   try {{
-    const res        = await fetch(`/session/${{SESSION_ID}}/stage/${{currentStage}}/voice`, {{
+    const isTeachPhase = stageData && stageData.phase === 'teach';
+    const submitUrl = isTeachPhase
+      ? `/session/${{SESSION_ID}}/teach/ask`
+      : `/session/${{SESSION_ID}}/stage/${{currentStage}}/voice`;
+    const res        = await fetch(submitUrl, {{
       method: 'POST',
       body:   form,
     }});
@@ -1015,10 +1099,11 @@ async function speakResponse(spokenText) {{
   label.textContent = '▶ response';
 
   try {{
+    const voiceId = stageData && stageData.phase === 'teach' ? 'ALEX_VOICE' : '';
     const res  = await fetch(`/session/${{SESSION_ID}}/speak`, {{
       method:  'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body:    JSON.stringify({{ text: spokenText }}),
+      body:    JSON.stringify({{ text: spokenText, voice_id: voiceId }}),
     }});
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
@@ -1080,6 +1165,16 @@ function renderAssessment(a) {{
     html += `<button class="next-btn" onclick="resetForProbe()">Try again →</button>`;
   }}
 
+  // During TEACH phase, show as Alex chat reply not Jordan verdict
+  if (stageData && stageData.phase === 'teach') {{
+    const alexReply = a.probe || a.feedback || '';
+    panel.innerHTML = `<div style="font-size:13px;color:#bbb;line-height:1.7;border-left:2px solid var(--accent);padding-left:12px;">${{alexReply}}</div>
+      <button class="next-btn" onclick="resetForProbe()" style="margin-top:8px;">Ask another question</button>`;
+    panel.className = 'assessment visible';
+    speakResponse(alexReply.split('.').slice(0,2).join('.') + '.');
+    return;
+  }}
+
   panel.innerHTML   = html;
   panel.className   = 'assessment visible';
   const toSpeak = (verdict === 'PARTIAL' && a.probe) ? a.probe : (a.feedback || '').split('.').slice(0,2).join('.') + '.';
@@ -1088,6 +1183,32 @@ function renderAssessment(a) {{
 
   document.getElementById('record-hint').textContent = '';
   showStatus('');
+}}
+
+async function handoverToJordan() {{
+  const btn = document.getElementById('ready-btn');
+  btn.disabled = true;
+  btn.textContent = 'Handing over…';
+  try {{
+    const audio = document.getElementById('stage-audio');
+    try {{ audio.pause(); audio.src = ''; }} catch(e) {{}}
+    await fetch(`/session/${{SESSION_ID}}/teach/complete`, {{method:'POST'}});
+  }} catch(e) {{}}
+  advanceStage(currentStage);
+}}
+
+async function backToAlex() {{
+  const btn = document.getElementById('back-to-alex-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {{
+    const audio = document.getElementById('stage-audio');
+    try {{ audio.pause(); audio.src = ''; }} catch(e) {{}}
+    await fetch(`/session/${{SESSION_ID}}/teach/restart`, {{method:'POST'}});
+  }} catch(e) {{}}
+  btn.disabled = false;
+  btn.textContent = '← Alex';
+  loadStage(1);
 }}
 
 function advanceStage(n) {{

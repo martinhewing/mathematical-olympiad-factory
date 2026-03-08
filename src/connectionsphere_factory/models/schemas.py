@@ -52,7 +52,9 @@ class StateResponse(BaseModel):
     turns_in_state:      int
     probe_rounds:        int
     probe_limit_reached: bool
-    requires_voice:      bool
+    requires_voice: bool
+    agent_name:     str = ""
+    agent_role:     str = ""
     valid_transitions:   list[str]
     current_node:        str
     current_label:       str

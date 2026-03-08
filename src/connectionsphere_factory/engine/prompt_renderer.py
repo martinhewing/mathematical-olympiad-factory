@@ -52,7 +52,7 @@ def call_claude(prompt: str, max_tokens: int = 2000) -> str:
     try:
         message = _get_client().messages.create(
             model      = settings.anthropic_model,
-            max_tokens = max_tokens,
+            max_tokens = max_tokens,  # default 600 in dev
             messages   = [{"role": "user", "content": prompt}],
         )
     except Exception as exc:

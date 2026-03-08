@@ -9,7 +9,7 @@ GET  /session/{id}/evaluate          — session debrief
 GET  /session/{id}/flagged           — flagged stage detail
 """
 
-from fastapi import APIRouter, HTTPException, Form
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 
 from connectionsphere_factory.engine import session_engine as engine
 from connectionsphere_factory.config import get_settings
@@ -57,7 +57,110 @@ def get_stage(session_id: str, stage_n: int):
         "probe_limit":       probe_limit,
         "probes_remaining":  probe_limit - probe_rounds,
         "submit_url":        f"/session/{session_id}/stage/{stage_n}/submit",
+        "comprehension_check": spec.get("comprehension_check", ""),
+        "concepts":          spec.get("concepts", []),
+        "greeting":          spec.get("greeting", ""),
+        "agent_name":        state.get("agent_name", ""),
+        "agent_role":        state.get("agent_role", ""),
     }
+
+
+@router.post("/session/{session_id}/teach/restart")
+def teach_restart(session_id: str):
+    """Reset FSM back to TEACH so candidate can review Alex lesson again."""
+    import os
+    if not store.exists(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    result = engine.load_session(session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    fsm, dll = result
+    from connectionsphere_factory.domain.fsm.states import State as _State
+    fsm.transition_to(_State.RESTART, trigger="back_to_teach"); fsm.transition_to(_State.SESSION_START, trigger="restarted"); fsm.transition_to(_State.TEACH, trigger="session_created")
+    # Reset dll to teach stage
+    dll = engine.FactoryConversationHistory()
+    dll.add_stage("teach_001", "teach")
+    # keep stage_specs cache on restart so lesson loads instantly
+    store.save(session_id, fsm, dll)
+    # clear cached audio
+    audio_file = f"/tmp/connectionsphere_audio/{session_id}_stage_1.wav"
+    if os.path.exists(audio_file):
+        os.remove(audio_file)
+    return {"status": "ok", "fsm_state": fsm.state.value}
+
+
+@router.post("/session/{session_id}/teach/ask")
+async def teach_ask(session_id: str, audio: UploadFile = File(...)):
+    """Candidate asks Alex a question during TEACH phase via voice."""
+    from connectionsphere_factory.config import get_settings
+    from connectionsphere_factory.voice.stt import transcribe
+    import anthropic, json, re
+    if not store.exists(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    audio_bytes  = await audio.read()
+    content_type = audio.content_type or "audio/webm"
+    transcript   = await transcribe(audio_bytes, content_type=content_type)
+    spec       = engine.get_or_generate_stage(session_id, 1)
+    first_name = store.load_field(session_id, "candidate_first_name") or "there"
+    problem    = store.load_field(session_id, "problem_statement") or ""
+    concepts   = spec.get("concepts", [])
+    concept_text = "\n".join(f"- {c.get('name','')}: {c.get('explanation','')}" for c in concepts)
+    prompt = (
+        f"You are Alex, a warm Senior Staff Engineer tutoring a candidate.\n"
+        f"Problem: {problem}\n"
+        f"Concepts covered:\n{concept_text}\n\n"
+        f"The candidate says: \"{transcript}\"\n\n"
+        f"Reply in 2-3 sentences. Be encouraging. Address them as {first_name}.\n"
+        f'Return ONLY JSON: {{"reply": "your response"}}'
+    )
+    cfg    = get_settings()
+    client = anthropic.Anthropic(api_key=cfg.anthropic_api_key)
+    msg    = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=300,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = msg.content[0].text.strip()
+    try:
+        clean = re.sub(r"^```[a-z]*\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+        reply = json.loads(clean).get("reply", clean)
+    except Exception:
+        reply = re.sub(r"^```[a-z]*\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+    return {
+        "verdict":               "PARTIAL",
+        "feedback":              reply,
+        "probe":                 reply,
+        "transcript":            transcript,
+        "concepts_demonstrated": [],
+        "concepts_missing":      [],
+        "next_url":              f"/session/{session_id}/stage/1",
+        "session_complete":      False,
+    }
+
+@router.post("/session/{session_id}/teach/complete")
+def teach_complete(session_id: str):
+    """Advance FSM from TEACH to REQUIREMENTS — Alex hands over to Jordan."""
+    import os
+    from connectionsphere_factory.domain.fsm.states import State
+    if not store.exists(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+    result = engine.load_session(session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+    fsm, dll = result
+    from connectionsphere_factory.domain.fsm.states import State as _State
+    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:
+        fsm.transition_to(_State.TEACH_CHECK,  trigger="comprehension_skipped")
+        fsm.transition_to(_State.REQUIREMENTS, trigger="teach_complete")
+        dll.current.confirm({})
+        dll.add_stage("requirements_001", "requirements")
+        # keep stage_specs cache on restart so lesson loads instantly
+        store.save(session_id, fsm, dll)
+    # clear cached audio so Jordan's is regenerated
+    audio_file = f"/tmp/connectionsphere_audio/{session_id}_stage_1.wav"
+    if os.path.exists(audio_file):
+        os.remove(audio_file)
+    return {"status": "ok", "fsm_state": fsm.state.value}
 
 
 @router.post("/session/{session_id}/stage/{stage_n}/submit")
