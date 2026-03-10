@@ -161,13 +161,9 @@ def teach_complete(session_id: str):
         current_specs = store.load_field(session_id, "stage_specs") or {}
         if "1" in current_specs:
             store.save_field(session_id, "teach_spec", current_specs["1"])
-        # Clear stage_specs so Jordan's spec is generated fresh
-        store.save_field(session_id, "stage_specs", {})
+
+
         store.save(session_id, fsm, dll)
-    # Clear cached audio so Jordan's voice is used
-    audio_file = f"/tmp/connectionsphere_audio/{session_id}_stage_1.wav"
-    if os.path.exists(audio_file):
-        os.remove(audio_file)
     # Pre-generate Jordan's stage spec so handover is instant
     try:
         engine.get_or_generate_stage(session_id, 1)
