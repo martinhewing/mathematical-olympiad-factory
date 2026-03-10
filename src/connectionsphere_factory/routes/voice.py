@@ -492,7 +492,7 @@ html, body {{
   font-size: 10px;
   color: var(--muted);
   letter-spacing: 0.08em;
-  min-width: 60px;
+  min-width: 48px;
   text-align: right;
 }}
 
@@ -812,7 +812,8 @@ html, body {{
       </button>
     </div>
     <div class="audio-bar">
-      <div class="audio-progress">
+      <button id="audio-play-btn" onclick="toggleAudioPlayback()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.08em;padding:4px 10px;border-radius:3px;cursor:pointer;min-width:36px;display:none;">▶</button>
+      <div class="audio-progress" style="cursor:default;">
         <div class="audio-fill" id="audio-fill"></div>
       </div>
       <span class="audio-label" id="audio-label">—</span>
@@ -921,11 +922,17 @@ async function loadStage(n) {{
     }}
     // Enable record button immediately, audio plays in background
     enableRecording();
-    // Only play audio once per stage+phase
+    // Autoplay once per stage+phase; show play button on revisit
     const audioKey = (stageData.phase || 'interview') + ':' + n;
+    const playBtn  = document.getElementById('audio-play-btn');
     if (!playedAudio.has(audioKey)) {{
       playedAudio.add(audioKey);
       playStageAudio(n);
+    }} else {{
+      // Revisit — preload audio and show play button
+      const audio = document.getElementById('stage-audio');
+      audio.src   = `/session/${{SESSION_ID}}/stage/${{n}}/audio/file`;
+      if (playBtn) {{ playBtn.textContent = '▶'; playBtn.style.display = 'inline-block'; }}
     }}
 
   }} catch(e) {{
@@ -936,54 +943,57 @@ async function loadStage(n) {{
 
 // ── Audio playback ───────────────────────────────────────────────
 async function playStageAudio(n) {{
-  const dot   = document.getElementById('speaking-dot');
-  const fill  = document.getElementById('audio-fill');
-  const label = document.getElementById('audio-label');
-  const audio = document.getElementById('stage-audio');
+  const dot      = document.getElementById('speaking-dot');
+  const fill     = document.getElementById('audio-fill');
+  const label    = document.getElementById('audio-label');
+  const audio    = document.getElementById('stage-audio');
+  const playBtn  = document.getElementById('audio-play-btn');
 
-  dot.className  = 'speaking-dot active';
+  dot.className    = 'speaking-dot active';
   fill.style.width = '0%';
-  label.textContent = '▶ playing';
+  label.textContent = '';
+  if (playBtn) playBtn.style.display = 'none';
 
   audio.src = `/session/${{SESSION_ID}}/stage/${{n}}/audio/file`;
 
-  audio.addEventListener('timeupdate', () => {{
+  audio.ontimeupdate = () => {{
     if (audio.duration) {{
       fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
       const rem = Math.ceil(audio.duration - audio.currentTime);
       label.textContent = rem + 's';
     }}
-  }}, {{ once: false }});
+  }};
 
-  audio.addEventListener('ended', () => {{
-    dot.className  = 'speaking-dot';
+  audio.onended = () => {{
+    dot.className    = 'speaking-dot';
     fill.style.width = '100%';
-    label.textContent = '✓ done';
+    label.textContent = '';
+    if (playBtn) {{ playBtn.textContent = '▶'; playBtn.style.display = 'inline-block'; }}
     enableRecording();
-    enableRecording();
-  }}, {{ once: true }});
+  }};
 
-  audio.addEventListener('error', () => {{
+  audio.onerror = () => {{
     dot.className = 'speaking-dot';
     label.textContent = 'no audio';
     enableRecording();
-  }}, {{ once: true }});
-  const audioFallback = setTimeout(() => enableRecording(), 60000);
-  const skipBtn = document.createElement('button');
-  skipBtn.textContent = 'skip ›';
-  skipBtn.style.cssText = 'background:none;border:none;color:#666;font-size:11px;cursor:pointer;margin-left:8px;font-family:monospace;';
-  skipBtn.onclick = () => {{ audio.pause(); clearTimeout(audioFallback); dot.className='speaking-dot'; label.textContent='skipped'; enableRecording(); skipBtn.remove(); }};
-  const oldSkip = document.querySelector('.skip-btn'); if (oldSkip) oldSkip.remove(); skipBtn.className = 'skip-btn'; document.querySelector('.audio-bar').appendChild(skipBtn);
+  }};
 
-  try {{ await audio.play(); }} catch(e) {{
-    // Autoplay blocked — enable recording immediately
+  setTimeout(() => {{ if (!audio.ended) enableRecording(); }}, 60000);
+  audio.play().catch(() => {{ label.textContent = 'no audio'; enableRecording(); }});
+}}
+
+function toggleAudioPlayback() {{
+  const audio   = document.getElementById('stage-audio');
+  const playBtn = document.getElementById('audio-play-btn');
+  const dot     = document.getElementById('speaking-dot');
+  if (audio.paused) {{
+    audio.play();
+    playBtn.textContent = '❙❙';
+    dot.className = 'speaking-dot active';
+  }} else {{
+    audio.pause();
+    playBtn.textContent = '▶';
     dot.className = 'speaking-dot';
-    label.textContent = 'click ▶ to play';
-    audio.controls = true;
-    document.querySelector('.audio-bar').appendChild(audio);
-    audio.style.display = 'block';
-    audio.style.width   = '100%';
-    enableRecording();
   }}
 }}
 
