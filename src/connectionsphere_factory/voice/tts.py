@@ -63,6 +63,6 @@ async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[b
             pass
 
 
-def audio_path(session_id: str, stage_n: int) -> str:
+def audio_path(session_id: str, stage_n: int, phase: str = "interview") -> str:
     settings = _settings()
-    return f"{settings.audio_storage_dir}/{session_id}_stage_{stage_n}.wav"
+    return f"{settings.audio_storage_dir}/{session_id}_{phase}_stage_{stage_n}.wav"

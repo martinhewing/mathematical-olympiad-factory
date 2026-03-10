@@ -51,7 +51,10 @@ async def get_stage_audio_file(session_id: str, stage_n: int):
     """Return raw WAV bytes for this stage (inline playback)."""
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    savepath = audio_path(session_id, stage_n)
+    import connectionsphere_factory.session_store as _store
+    _fsm_result = engine.load_session(session_id)
+    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in {"Teach", "Teach Comprehension Check"}) else "interview"
+    savepath = audio_path(session_id, stage_n, _phase)
     if not Path(savepath).exists():
         text, voice_id = _stage_text(session_id, stage_n)
         await generate_tts(text, save_path=savepath, voice_id=voice_id)
@@ -849,6 +852,7 @@ html, body {{
 
 <script>
 const SESSION_ID = {json.dumps(session_id)};
+  const playedAudio = new Set();
 let currentStage   = 1;
 let isRecording    = false;
 let mediaRecorder  = null;
@@ -917,8 +921,12 @@ async function loadStage(n) {{
     }}
     // Enable record button immediately, audio plays in background
     enableRecording();
-    // Play audio in background
-    playStageAudio(n);
+    // Only play audio once per stage+phase
+    const audioKey = (stageData.phase || 'interview') + ':' + n;
+    if (!playedAudio.has(audioKey)) {{
+      playedAudio.add(audioKey);
+      playStageAudio(n);
+    }}
 
   }} catch(e) {{
     qt.innerHTML = 'Failed to load stage. ' + e.message;
@@ -1208,6 +1216,9 @@ async function backToAlex() {{
   }} catch(e) {{}}
   btn.disabled = false;
   btn.textContent = '← Alex';
+  // Re-enable the handover button
+  const readyBtn = document.getElementById('ready-btn');
+  if (readyBtn) {{ readyBtn.disabled = false; readyBtn.textContent = 'Ready for interview →'; }}
   loadStage(1);
 }}
 
