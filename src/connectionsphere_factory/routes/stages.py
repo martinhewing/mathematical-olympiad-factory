@@ -93,11 +93,15 @@ def teach_restart(session_id: str):
 
 
 @router.post("/session/{session_id}/teach/ask")
-async def teach_ask(session_id: str, audio: UploadFile = File(...)):
-    """Candidate asks Alex a question during TEACH phase via voice."""
+async def teach_ask(
+    session_id: str,
+    audio: UploadFile = File(...),
+    images: list[UploadFile] = File(default=[]),
+):
+    """Candidate asks Alex a question during TEACH phase via voice + optional diagrams."""
     from connectionsphere_factory.config import get_settings
     from connectionsphere_factory.voice.stt import transcribe
-    import anthropic, json, re
+    import anthropic, json, re, base64
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
     audio_bytes  = await audio.read()
@@ -108,20 +112,33 @@ async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     problem    = store.load_field(session_id, "problem_statement") or ""
     concepts   = spec.get("concepts", [])
     concept_text = "\n".join(f"- {c.get('name','')}: {c.get('explanation','')}" for c in concepts)
-    prompt = (
+    prompt_text = (
         f"You are Alex, a warm Senior Staff Engineer tutoring a candidate.\n"
         f"Problem: {problem}\n"
         f"Concepts covered:\n{concept_text}\n\n"
         f"The candidate says: \"{transcript}\"\n\n"
-        f"Reply in 2-3 sentences. Be encouraging. Address them as {first_name}.\n"
-        f'Return ONLY JSON: {{"reply": "your response"}}'
+        + ("The candidate has also shared diagram(s) of their design. Review them as part of your feedback.\n\n" if images else "")
+        + f"Reply in 2-3 sentences. Be encouraging. Address them as {first_name}.\n"
+        + 'Return ONLY JSON: {"reply": "your response"}'
     )
+    # Build message content — text + optional images
+    user_content = []
+    for img in images:
+        img_bytes = await img.read()
+        if img_bytes:
+            media_type = img.content_type or "image/png"
+            user_content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": media_type,
+                           "data": base64.b64encode(img_bytes).decode()},
+            })
+    user_content.append({"type": "text", "text": prompt_text})
     cfg    = get_settings()
     client = anthropic.Anthropic(api_key=cfg.anthropic_api_key)
     msg    = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=300,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": user_content}],
     )
     raw = msg.content[0].text.strip()
     try:

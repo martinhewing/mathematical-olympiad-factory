@@ -47,6 +47,7 @@ def create_session(
     store.save_field(session_id, "scene",             scene_data)
     store.save_field(session_id, "problem_statement", problem_statement)
     store.save_field(session_id, "candidate_name",    candidate_name)
+    store.save_field(session_id, "candidate_first_name", candidate_name.strip().split()[0] if candidate_name.strip() else "there")
     store.save_field(session_id, "candidate_level",   candidate_level.value)
     store.save_field(session_id, "created_at",        datetime.now().isoformat())
     store.save_field(session_id, "stage_specs",       {})
@@ -122,6 +123,7 @@ def process_submission(
     session_id: str,
     stage_n:    int,
     answer:     str,
+    images:     list | None = None,
 ) -> AssessmentResponse:
     result = load_session(session_id)
     if not result:
@@ -233,7 +235,7 @@ def process_submission(
         "probe_limit":           probe_limit,
         "probe_history":         probe_history,
         "candidate_answer":      answer,
-    })
+    }, images=images or [])
 
     verdict               = raw.get("verdict", "NOT_MET")
     feedback              = raw.get("feedback", "")

@@ -45,7 +45,7 @@ def render(template_name: str, context: dict[str, Any]) -> str:
     return _jinja_env.get_template(template_name).render(**context)
 
 
-def call_claude(prompt: str, max_tokens: int = 2000) -> str:
+def call_claude(prompt: str, max_tokens: int = 2000, images: list | None = None) -> str:
     settings = get_settings()
     start    = time.perf_counter()
 
@@ -79,8 +79,9 @@ def render_and_call(
     template_name: str,
     context:       dict[str, Any],
     max_tokens:    int = 2000,
+    images:        list | None = None,
 ) -> dict[str, Any]:
-    return _parse_json(call_claude(render(template_name, context), max_tokens), template_name)
+    return _parse_json(call_claude(render(template_name, context), max_tokens, images=images), template_name)
 
 
 def _parse_json(raw: str, source: str = "") -> dict[str, Any]:

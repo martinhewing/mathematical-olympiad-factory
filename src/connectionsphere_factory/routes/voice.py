@@ -182,9 +182,10 @@ async def submit_voice_answer(
     session_id: str,
     stage_n:    int,
     audio:      UploadFile = File(...),
+    images:     list[UploadFile] = File(default=[]),
 ):
     """
-    Submit spoken answer. Transcribes via Cartesia STT → Claude assessment.
+    Submit spoken answer + optional diagrams. Transcribes via STT → Claude assessment.
     Returns same JSON as text submit + transcript field.
     """
     if not store.exists(session_id):
@@ -204,10 +205,22 @@ async def submit_voice_answer(
             detail="We couldn't hear that clearly. Check your microphone is connected and try again — speak for at least 3 seconds.",
         )
 
+    # Attach images to transcript for Claude assessment
+    image_data = []
+    for img in images:
+        img_bytes = await img.read()
+        if img_bytes:
+            import base64
+            image_data.append({
+                "media_type": img.content_type or "image/png",
+                "data": base64.b64encode(img_bytes).decode(),
+            })
+
     assessment = engine.process_submission(
         session_id = session_id,
         stage_n    = stage_n,
         answer     = transcript,
+        images     = image_data,
     )
     # Convert Pydantic model or dict to plain dict
     if hasattr(assessment, "model_dump"):
@@ -496,6 +509,52 @@ html, body {{
   text-align: right;
 }}
 
+.whiteboard {{
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 44px;
+}}
+.whiteboard-drop {{
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}}
+.whiteboard-drop:hover {{ border-color: var(--accent); }}
+.whiteboard-label {{
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}}
+.whiteboard-thumbs {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
+.whiteboard-thumb {{
+  position: relative; width: 48px; height: 48px;
+  border-radius: 3px; overflow: hidden;
+  border: 1px solid var(--border); cursor: pointer; flex-shrink: 0;
+}}
+.whiteboard-thumb img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+.whiteboard-thumb .thumb-del {{
+  position: absolute; top: 2px; right: 2px;
+  background: rgba(0,0,0,0.7); color: var(--muted);
+  font-size: 9px; border: none; border-radius: 2px;
+  cursor: pointer; padding: 1px 3px; line-height: 1; display: none;
+}}
+.whiteboard-thumb:hover .thumb-del {{ display: block; }}
+.whiteboard-lightbox {{
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85); z-index: 1000;
+  align-items: center; justify-content: center; cursor: pointer;
+}}
+.whiteboard-lightbox.open {{ display: flex; }}
+.whiteboard-lightbox img {{ max-width: 90vw; max-height: 90vh; border-radius: 4px; object-fit: contain; }}
 /* ── Right panel — candidate ──────────────────────────────────── */
 .right-panel {{
   display: flex;
@@ -845,11 +904,21 @@ html, body {{
     </div>
 
     <div class="assessment" id="assessment"></div>
+    <div class="whiteboard" id="whiteboard">
+      <input type="file" id="whiteboard-input" accept="image/*" multiple style="display:none" onchange="handleWhiteboardUpload(event)">
+      <div class="whiteboard-drop" id="whiteboard-drop" onclick="document.getElementById('whiteboard-input').click()">
+        <span class="whiteboard-label">+ diagram</span>
+      </div>
+      <div class="whiteboard-thumbs" id="whiteboard-thumbs"></div>
+    </div>
   </div>
 
 </div>
 
 <audio id="stage-audio" style="display:none"></audio>
+<div class="whiteboard-lightbox" id="whiteboard-lightbox" onclick="this.classList.remove('open')">
+  <img src="" alt="diagram">
+</div>
 
 <script>
 const SESSION_ID = {json.dumps(session_id)};
@@ -982,6 +1051,35 @@ async function playStageAudio(n) {{
   audio.play().catch(() => {{ label.textContent = 'no audio'; enableRecording(); }});
 }}
 
+function handleWhiteboardUpload(event) {{
+  const files = Array.from(event.target.files);
+  const thumbs = document.getElementById('whiteboard-thumbs');
+  files.forEach(file => {{
+    const reader = new FileReader();
+    reader.onload = e => {{
+      const thumb = document.createElement('div');
+      thumb.className = 'whiteboard-thumb';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.title = file.name;
+      img.onclick = () => openLightbox(e.target.result);
+      const del = document.createElement('button');
+      del.className = 'thumb-del';
+      del.textContent = '✕';
+      del.onclick = ev => {{ ev.stopPropagation(); thumb.remove(); }};
+      thumb.appendChild(img);
+      thumb.appendChild(del);
+      thumbs.appendChild(thumb);
+    }};
+    reader.readAsDataURL(file);
+  }});
+  event.target.value = '';
+}}
+function openLightbox(src) {{
+  const lb = document.getElementById('whiteboard-lightbox');
+  lb.querySelector('img').src = src;
+  lb.classList.add('open');
+}}
 function toggleAudioPlayback() {{
   const audio   = document.getElementById('stage-audio');
   const playBtn = document.getElementById('audio-play-btn');
@@ -1073,7 +1171,16 @@ function drawWaveform() {{
 // ── Submit audio ─────────────────────────────────────────────────
 async function submitAudio() {{
   const blob = new Blob(audioChunks, {{ type: 'audio/webm' }});
+  // Attach any whiteboard images
+  const thumbImgs = document.querySelectorAll('.whiteboard-thumb img');
+  const imageFiles = [];
+  for (const img of thumbImgs) {{
+    const res  = await fetch(img.src);
+    const blob = await res.blob();
+    imageFiles.push(new File([blob], 'diagram.png', {{type: blob.type}}));
+  }}
   const form = new FormData();
+  imageFiles.forEach(f => form.append('images', f));
   form.append('audio', blob, 'answer.webm');
 
   showStatus('Transcribing…');
