@@ -25,7 +25,8 @@ _PUBLIC_PATHS = frozenset({
 
 # Browser-rendered interview UI — cannot send X-API-Key headers
 _PUBLIC_PREFIXES = (
-    "/session/",   # /session/{id}/stage/{n}, /session/{id}/state, etc.
+    "/session/",    # /session/{id}/stage/{n}, /session/{id}/state, etc.
+    "/sessions/",   # /sessions/{id}/voice — browser UI page
 )
 
 
