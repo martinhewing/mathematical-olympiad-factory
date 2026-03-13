@@ -82,7 +82,7 @@ _CACHE_KEY_PREFIX = "concept_diagram:"
 # is justified.
 _DIAGRAM_MODEL = "claude-sonnet-4-20250514"
 
-_DIAGRAM_MAX_TOKENS = 4096
+_DIAGRAM_MAX_TOKENS = 6000
 
 _SYSTEM_PROMPT = """\
 You are an expert SVG diagram generator for system design architecture diagrams.
