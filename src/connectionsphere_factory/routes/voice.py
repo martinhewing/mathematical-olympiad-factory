@@ -509,8 +509,96 @@ html, body {{
   text-align: right;
 }}
 
+/* ── Whiteboard panel ────────────────────────────────────────── */
 .whiteboard {{
   border-top: 1px solid var(--border);
+  display: none;           /* hidden by default — activated by JS */
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}}
+.whiteboard.active {{
+  display: flex;
+}}
+
+/* Banner — appears above the drop zone when whiteboard is activated */
+.whiteboard-banner {{
+  padding: 8px 16px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}}
+.whiteboard-banner.mode-alex {{
+  background: rgba(88, 166, 255, 0.07);
+  border-bottom: 1px solid rgba(88, 166, 255, 0.18);
+  color: var(--accent);
+}}
+.whiteboard-banner.mode-jordan {{
+  background: rgba(255, 170, 0, 0.07);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.18);
+  color: var(--partial);
+}}
+.whiteboard-banner.mode-required {{
+  background: rgba(255, 68, 68, 0.07);
+  border-bottom: 1px solid rgba(255, 68, 68, 0.2);
+  color: var(--danger);
+}}
+.whiteboard-banner-dot {{
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: wb-pulse 2s ease-in-out infinite;
+}}
+@keyframes wb-pulse {{
+  0%, 100% {{ opacity: 1; }}
+  50%       {{ opacity: 0.35; }}
+}}
+
+/* Reference diagram — shown as a small inline preview */
+.whiteboard-reference {{
+  display: none;
+  padding: 10px 16px 4px;
+  border-bottom: 1px solid var(--border);
+}}
+.whiteboard-reference.visible {{
+  display: block;
+}}
+.whiteboard-reference-label {{
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}}
+.whiteboard-reference svg,
+.whiteboard-reference img {{
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: block;
+}}
+.whiteboard-reference-loading {{
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}}
+
+/* Drop zone + thumbs row */
+.whiteboard-controls {{
   padding: 10px 16px;
   display: flex;
   align-items: center;
@@ -527,6 +615,9 @@ html, body {{
   flex-shrink: 0;
 }}
 .whiteboard-drop:hover {{ border-color: var(--accent); }}
+.whiteboard.mode-required .whiteboard-drop {{
+  border-color: rgba(255,68,68,0.45);
+}}
 .whiteboard-label {{
   font-family: 'DM Mono', monospace;
   font-size: 10px;
@@ -541,6 +632,51 @@ html, body {{
   border: 1px solid var(--border); cursor: pointer; flex-shrink: 0;
 }}
 .whiteboard-thumb img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+
+/* Record button dimming when diagram is required but not yet provided */
+.record-btn.diagram-pending {{
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
+}}
+.diagram-gate-hint {{
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--danger);
+  letter-spacing: 0.06em;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  margin-top: -20px;
+}}
+.diagram-gate-hint.visible {{ opacity: 1; }}
+
+/* ── Rubric checklist in assessment panel ────────────────────── */
+.rubric-list {{
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}}
+.rubric-item {{
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}}
+.rubric-icon {{
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 11px;
+}}
+.rubric-icon.present  {{ color: var(--confirm); }}
+.rubric-icon.partial  {{ color: var(--partial); }}
+.rubric-icon.missing  {{ color: var(--danger); }}
+.rubric-icon.unknown  {{ color: var(--muted); }}
+.rubric-text {{ color: var(--muted); }}
+.rubric-text.required-item {{ color: var(--text); }}
 .whiteboard-thumb .thumb-del {{
   position: absolute; top: 2px; right: 2px;
   background: rgba(0,0,0,0.7); color: var(--muted);
@@ -905,12 +1041,32 @@ html, body {{
 
     <div class="assessment" id="assessment"></div>
     <div class="whiteboard" id="whiteboard">
-      <input type="file" id="whiteboard-input" accept="image/*" multiple style="display:none" onchange="handleWhiteboardUpload(event)">
-      <div class="whiteboard-drop" id="whiteboard-drop" onclick="document.getElementById('whiteboard-input').click()">
-        <span class="whiteboard-label">+ diagram</span>
+      <!-- Banner: coloured prompt strip, toggled by activateWhiteboard() -->
+      <div class="whiteboard-banner mode-alex" id="whiteboard-banner" style="display:none">
+        <span class="whiteboard-banner-dot"></span>
+        <span id="whiteboard-banner-text">Sketch this out</span>
       </div>
-      <div class="whiteboard-thumbs" id="whiteboard-thumbs"></div>
+
+      <!-- Reference diagram: fetched from /concept/{id}/diagram on activation -->
+      <div class="whiteboard-reference" id="whiteboard-reference">
+        <div class="whiteboard-reference-label">reference diagram</div>
+        <div id="whiteboard-reference-inner">
+          <div class="whiteboard-reference-loading">loading…</div>
+        </div>
+      </div>
+
+      <!-- Drop zone + thumbnails -->
+      <div class="whiteboard-controls">
+        <input type="file" id="whiteboard-input" accept="image/*" multiple style="display:none" onchange="handleWhiteboardUpload(event)">
+        <div class="whiteboard-drop" id="whiteboard-drop" onclick="document.getElementById('whiteboard-input').click()">
+          <span class="whiteboard-label">+ diagram</span>
+        </div>
+        <div class="whiteboard-thumbs" id="whiteboard-thumbs"></div>
+      </div>
     </div>
+
+    <!-- Gate hint: shown below record button when diagram required but missing -->
+    <div class="diagram-gate-hint" id="diagram-gate-hint">upload a diagram to continue</div>
   </div>
 
 </div>
@@ -963,6 +1119,18 @@ async function loadStage(n) {{
     // Show question + scene based on phase
     const isTeach = (stageData.phase === 'teach');
     qt.innerHTML  = isTeach ? (stageData.comprehension_check || '') : (stageData.opening_question || '');
+
+    // ── Whiteboard: activate for Alex drawing comprehension check ─────────
+    deactivateWhiteboard();  // always reset first on stage load
+    if (isTeach && stageData.comprehension_check_mode === 'drawing') {{
+      activateWhiteboard({{
+        by:        'alex',
+        required:  true,
+        prompt:    'Sketch this before we move on',
+        conceptId: stageData.concept_id || null,
+        rubric:    stageData.drawing_rubric || [],
+      }});
+    }}
     // Swap scene text: Alex's lesson during teach, Jordan's scenario during interview
     const sceneEl = document.getElementById('scene-text');
     if (isTeach && stageData.greeting) {{
@@ -1066,10 +1234,15 @@ function handleWhiteboardUpload(event) {{
       const del = document.createElement('button');
       del.className = 'thumb-del';
       del.textContent = '✕';
-      del.onclick = ev => {{ ev.stopPropagation(); thumb.remove(); }};
+      del.onclick = ev => {{
+        ev.stopPropagation();
+        thumb.remove();
+        updateSubmitGate();   // re-evaluate gate after removal
+      }};
       thumb.appendChild(img);
       thumb.appendChild(del);
       thumbs.appendChild(thumb);
+      updateSubmitGate();   // ungate if diagram requirement now satisfied
     }};
     reader.readAsDataURL(file);
   }});
@@ -1170,6 +1343,15 @@ function drawWaveform() {{
 
 // ── Submit audio ─────────────────────────────────────────────────
 async function submitAudio() {{
+  // ── Diagram gate: block submission if drawing is required but not uploaded ─
+  if (diagramRequired) {{
+    const thumbCount = document.querySelectorAll('.whiteboard-thumb').length;
+    if (thumbCount === 0) {{
+      updateSubmitGate();   // re-flash the gate hint
+      return;               // don't submit
+    }}
+  }}
+
   const blob = new Blob(audioChunks, {{ type: 'audio/webm' }});
   // Attach any whiteboard images
   const thumbImgs = document.querySelectorAll('.whiteboard-thumb img');
@@ -1268,6 +1450,42 @@ function renderAssessment(a) {{
     html += `<div class="probe-text">${{a.probe}}</div>`;
   }}
 
+  // ── Diagram request: Jordan is asking the candidate to draw ───────────
+  if (a.diagram_request && a.diagram_request.required) {{
+    const dr = a.diagram_request;
+    activateWhiteboard({{
+      by:        'jordan',
+      required:  true,
+      prompt:    dr.prompt || 'Draw the architecture — upload your diagram',
+      conceptId: dr.concept_id || null,
+      rubric:    dr.rubric   || [],
+    }});
+  }} else if (a.diagram_request && !a.diagram_request.required) {{
+    // Suggested but not mandatory
+    activateWhiteboard({{
+      by:        'jordan',
+      required:  false,
+      prompt:    a.diagram_request.prompt || 'Diagrams welcome — upload if you have one',
+      conceptId: a.diagram_request.concept_id || null,
+      rubric:    a.diagram_request.rubric    || [],
+    }});
+  }}
+
+  // ── Diagram evaluation rubric (when Jordan scored a submitted drawing) ─
+  if (a.diagram_scores && currentRubric.length > 0) {{
+    html += renderRubric(currentRubric, a.diagram_scores);
+  }} else if (a.diagram_scores && a.diagram_scores.length > 0) {{
+    // Rubric not in client state — render scores without labels
+    const icons = {{ PRESENT: '✓', PARTIAL: '◐', MISSING: '✗' }};
+    const scoreHtml = a.diagram_scores.map(s =>
+      `<div class="rubric-item">
+         <span class="rubric-icon ${{s.status.toLowerCase()}}">${{icons[s.status] || '○'}}</span>
+         <span class="rubric-text">${{s.label}}</span>
+       </div>`
+    ).join('');
+    html += `<div class="rubric-list">${{scoreHtml}}</div>`;
+  }}
+
   if (shown.length || missing.length) {{
     html += '<div class="concepts-row">';
     shown.forEach(c   => html += `<span class="concept-chip confirmed">+ ${{c}}</span>`);
@@ -1342,12 +1560,16 @@ async function backToAlex() {{
 function advanceStage(n) {{
   document.getElementById('assessment').className = 'assessment';
   document.getElementById('transcript-preview').className = 'transcript-preview';
+  deactivateWhiteboard();
   loadStage(n);
 }}
 
 function resetForProbe() {{
   document.getElementById('assessment').className = 'assessment';
   document.getElementById('transcript-preview').className = 'transcript-preview';
+  // Keep whiteboard open on probe — candidate may still be drawing
+  // But reset the gate so they can re-answer verbally if the diagram is uploaded
+  updateSubmitGate();
   enableRecording();
   document.getElementById('record-hint').textContent = 'Answer the follow-up';
 }}
@@ -1369,6 +1591,163 @@ function showTranscript(text) {{
     el.textContent = '"' + text.slice(0, 120) + (text.length > 120 ? '…' : '') + '"';
     el.className   = 'transcript-preview visible';
   }}
+}}
+
+// ── Whiteboard state ─────────────────────────────────────────────
+let diagramRequired    = false;   // true → submit gated until ≥1 thumb
+let diagramRequiredBy  = null;    // 'alex' | 'jordan' | null
+let currentRubric      = [];      // DrawingRubricItem list from last diagram_request
+let referenceConceptId = null;    // concept_id currently shown as reference
+
+// ── Whiteboard: activate ─────────────────────────────────────────
+function activateWhiteboard(opts = {{}}) {{
+  /*
+    opts:
+      by        — 'alex' | 'jordan'          (default 'alex')
+      required  — bool                        (default false)
+      prompt    — string shown in banner      (default by-mode)
+      conceptId — string, loads reference SVG (default null)
+      rubric    — array of rubric items       (default [])
+  */
+  const by       = opts.by       || 'alex';
+  const required = opts.required || false;
+  const conceptId = opts.conceptId || null;
+  currentRubric   = opts.rubric  || [];
+
+  const panel  = document.getElementById('whiteboard');
+  const banner = document.getElementById('whiteboard-banner');
+  const btext  = document.getElementById('whiteboard-banner-text');
+
+  panel.classList.add('active');
+  banner.style.display = 'flex';
+
+  // Banner mode class
+  banner.className = 'whiteboard-banner mode-' + (required ? 'required' : by);
+  panel.classList.toggle('mode-required', required);
+
+  // Banner text
+  const defaultPrompts = {{
+    alex:   'Sketch this out for me',
+    jordan: 'Draw it out — show me the architecture',
+  }};
+  btext.textContent = opts.prompt || defaultPrompts[by] || 'Upload your diagram';
+
+  // Gate state
+  diagramRequired   = required;
+  diagramRequiredBy = by;
+
+  // Reference diagram
+  if (conceptId && conceptId !== referenceConceptId) {{
+    referenceConceptId = conceptId;
+    loadReferenceDiagram(conceptId);
+  }} else if (!conceptId) {{
+    document.getElementById('whiteboard-reference').classList.remove('visible');
+  }}
+
+  updateSubmitGate();
+}}
+
+// ── Whiteboard: deactivate ────────────────────────────────────────
+function deactivateWhiteboard() {{
+  const panel  = document.getElementById('whiteboard');
+  const banner = document.getElementById('whiteboard-banner');
+
+  panel.classList.remove('active', 'mode-required');
+  banner.style.display = 'none';
+  document.getElementById('whiteboard-reference').classList.remove('visible');
+  document.getElementById('whiteboard-thumbs').innerHTML = '';
+
+  diagramRequired    = false;
+  diagramRequiredBy  = null;
+  currentRubric      = [];
+  referenceConceptId = null;
+
+  updateSubmitGate();
+}}
+
+// ── Submit gate: disable record button when diagram required but absent ───────
+function updateSubmitGate() {{
+  const btn      = document.getElementById('record-btn');
+  const hint     = document.getElementById('diagram-gate-hint');
+  const thumbs   = document.querySelectorAll('.whiteboard-thumb');
+  const hasDrawing = thumbs.length > 0;
+
+  const blocked = diagramRequired && !hasDrawing;
+
+  btn.classList.toggle('diagram-pending', blocked);
+  if (hint) hint.classList.toggle('visible', blocked);
+
+  // Also update the banner colour to reflect pending state
+  const banner = document.getElementById('whiteboard-banner');
+  if (diagramRequired && banner) {{
+    banner.className = 'whiteboard-banner mode-' + (blocked ? 'required' : diagramRequiredBy);
+  }}
+}}
+
+// ── Load reference diagram from /concept/{id}/diagram ────────────
+async function loadReferenceDiagram(conceptId) {{
+  const refPanel = document.getElementById('whiteboard-reference');
+  const inner    = document.getElementById('whiteboard-reference-inner');
+
+  refPanel.classList.add('visible');
+  inner.innerHTML = '<div class="whiteboard-reference-loading">loading reference…</div>';
+
+  try {{
+    const res = await fetch(`/concept/${{conceptId}}/diagram`);
+    if (!res.ok) throw new Error('not found');
+    const svg = await res.text();
+    inner.innerHTML = svg;
+    // Constrain the inline SVG to the panel width
+    const svgEl = inner.querySelector('svg');
+    if (svgEl) {{
+      svgEl.style.width    = '100%';
+      svgEl.style.height   = 'auto';
+      svgEl.style.maxHeight = '160px';
+      svgEl.style.display  = 'block';
+    }}
+  }} catch (e) {{
+    // Non-fatal — hide the reference slot silently
+    refPanel.classList.remove('visible');
+    inner.innerHTML = '';
+  }}
+}}
+
+// ── Rubric checklist renderer (called from renderAssessment) ─────
+function renderRubric(rubric, scores) {{
+  /*
+    rubric: array of {{ label, description, required }}
+    scores: array of {{ label, status }}  — status: PRESENT | PARTIAL | MISSING
+    Returns HTML string for the rubric checklist.
+  */
+  if (!rubric || rubric.length === 0) return '';
+
+  const scoreMap = {{}};
+  (scores || []).forEach(s => {{ scoreMap[s.label] = s.status; }});
+
+  const iconMap = {{
+    PRESENT: {{ icon: '✓', cls: 'present' }},
+    PARTIAL: {{ icon: '◐', cls: 'partial' }},
+    MISSING: {{ icon: '✗', cls: 'missing'  }},
+  }};
+
+  const items = rubric.map(item => {{
+    const status = scoreMap[item.label] || 'unknown';
+    const ic     = iconMap[status] || {{ icon: '○', cls: 'unknown' }};
+    const req    = item.required ? ' required-item' : '';
+    return `
+      <div class="rubric-item">
+        <span class="rubric-icon ${{ic.cls}}">${{ic.icon}}</span>
+        <span class="rubric-text${{req}}">${{item.label}}${{item.required ? ' *' : ''}}</span>
+      </div>`;
+  }}).join('');
+
+  return `
+    <div class="rubric-list">
+      ${{items}}
+      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px">
+        * required element
+      </div>
+    </div>`;
 }}
 
 // ── Boot ─────────────────────────────────────────────────────────

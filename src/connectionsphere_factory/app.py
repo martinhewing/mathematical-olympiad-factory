@@ -86,6 +86,9 @@ def create_app() -> FastAPI:
     app.include_router(visualize.router)
     app.include_router(voice.router)
 
+    from connectionsphere_factory.routes.diagrams import router as diagrams_router
+    app.include_router(diagrams_router)
+
     # ── OpenAPI — declare X-API-Key security scheme ───────────────────────
     def custom_openapi():
         if app.openapi_schema:

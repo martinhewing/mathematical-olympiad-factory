@@ -57,3 +57,31 @@ def all_sessions() -> list[str]:
 def list_all() -> list[str]:
     """Return all session IDs. Used by GET /sessions and health check."""
     return list(_store.keys())
+
+
+# ── Global key-value store (session-independent) ──────────────────────────────
+# Used for data shared across all sessions: concept diagrams, etc.
+# Key format convention: "{namespace}:{identifier}"
+# e.g. "concept_diagram:load_balancer"
+
+_global_store: dict[str, str] = {}
+
+
+def save_global(key: str, value: str) -> None:
+    """Persist a global (session-independent) string value."""
+    _global_store[key] = value
+
+
+def load_global(key: str) -> str | None:
+    """Retrieve a global value. Returns None if absent."""
+    return _global_store.get(key)
+
+
+def delete_global(key: str) -> bool:
+    """Remove a global value. Returns True if it existed."""
+    return _global_store.pop(key, None) is not None
+
+
+def list_global(prefix: str = "") -> list[str]:
+    """Return all global keys, optionally filtered by prefix."""
+    return [k for k in _global_store if k.startswith(prefix)]

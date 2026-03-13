@@ -69,3 +69,6 @@ class AssessmentResponse(BaseModel):
     concepts_missing:      list[str]
     next_url:              str | None
     session_complete:      bool = False
+    # Diagram fields — set by process_submission when Jordan requests / evaluates a drawing
+    diagram_request:  dict | None = None   # Jordan's diagram_request payload (nullable)
+    diagram_scores:   list[dict]  = Field(default_factory=list)  # rubric scores from evaluator

@@ -18,8 +18,18 @@ from connectionsphere_factory.domain.fsm.machine import FactoryFSM
 from connectionsphere_factory.domain.fsm.states import State
 from connectionsphere_factory.domain.agents import get_agent_for_state
 from connectionsphere_factory.engine.prompt_renderer import render_and_call
+from connectionsphere_factory.engine.diagram_evaluator import (
+    evaluate_diagram, diagram_passes_minimum, diagram_summary,
+)
+from connectionsphere_factory.engine.teach_spec import build_teach_spec
 from connectionsphere_factory.models.schemas import AssessmentResponse, CandidateLevel
 import connectionsphere_factory.session_store as store
+from connectionsphere_factory.engine.concept_store import (
+    accumulate as accumulate_concepts,
+    evaluate as evaluate_concepts,
+    get_accumulated as get_accumulated_concepts,
+    record_fragment,
+)
 
 log = get_logger(__name__)
 
@@ -92,22 +102,32 @@ def get_or_generate_stage(session_id: str, stage_n: int) -> dict[str, Any]:
 
     from connectionsphere_factory.domain.fsm.states import State as _State
     is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}
-    template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"
-    ctx = {
-        "problem_statement":    store.load_field(session_id, "problem_statement"),
-        "candidate_level":      store.load_field(session_id, "candidate_level"),
-        "candidate_first_name": store.load_field(session_id, "candidate_first_name") or "there",
-        "session_type":         "system_design",
-        "stage_number":         stage_n,
-        "fsm_state":            fsm.state.value,
-        "fsm_mermaid":          fsm.mermaid(),
-        "progress":             fsm.context.progress_summary,
-        "confirmed_concepts":   dll.confirmed_labels,
-        "label_id":             label_id,
-        "label_name":           label_name,
-        "concepts":             concepts,
-    }
-    spec = render_and_call(template, ctx)
+
+    if is_teach:
+        # Curriculum-backed: skeleton from curriculum.py, enriched by Claude.
+        spec = build_teach_spec(
+            session_id           = session_id,
+            candidate_first_name = store.load_field(session_id, "candidate_first_name") or "there",
+            candidate_level      = store.load_field(session_id, "candidate_level") or "senior",
+            problem_statement    = store.load_field(session_id, "problem_statement") or "",
+        )
+    else:
+        # Jordan stage: fully dynamic, unchanged.
+        ctx = {
+            "problem_statement":    store.load_field(session_id, "problem_statement"),
+            "candidate_level":      store.load_field(session_id, "candidate_level"),
+            "candidate_first_name": store.load_field(session_id, "candidate_first_name") or "there",
+            "session_type":         "system_design",
+            "stage_number":         stage_n,
+            "fsm_state":            fsm.state.value,
+            "fsm_mermaid":          fsm.mermaid(),
+            "progress":             fsm.context.progress_summary,
+            "confirmed_concepts":   dll.confirmed_labels,
+            "label_id":             label_id,
+            "label_name":           label_name,
+            "concepts":             concepts,
+        }
+        spec = render_and_call(template, ctx)
 
     specs[str(stage_n)] = spec
     store.save_field(session_id, "stage_specs", specs)
@@ -172,10 +192,12 @@ def process_submission(
         spec       = get_or_generate_stage(session_id, stage_n)
         first_name = store.load_field(session_id, "candidate_first_name") or "there"
         check_result = render_and_call("teach_check.j2", {
-            "problem_statement": store.load_field(session_id, "problem_statement"),
+            "problem_statement":   store.load_field(session_id, "problem_statement"),
             "candidate_first_name": first_name,
-            "candidate_answer":  answer,
-            "lesson_summary":    spec.get("ready_summary", ""),
+            "candidate_answer":    answer,
+            "lesson_summary":      spec.get("ready_summary", ""),
+            "minimum_bar":         spec.get("minimum_bar", ""),
+            "comprehension_check": spec.get("comprehension_check", ""),
         })
         understood = check_result.get("advance_to_simulation", False)
         feedback   = check_result.get("feedback", "")
@@ -217,6 +239,53 @@ def process_submission(
         if t.get("turn_type") == "probe"
     ]
 
+    # Fetch concepts accumulated across prior turns this stage
+    accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))
+
+    # ── Diagram evaluation (runs before assess_submission.j2) ────────────
+    pending_rubric  = store.load_field(session_id, f"pending_diagram_rubric_{stage_n}") or []
+    diagram_scores: list[dict] = []
+    if images and pending_rubric:
+        raw_scores     = evaluate_diagram(images, pending_rubric)
+        diagram_scores = [s.to_dict() for s in raw_scores]
+        diagram_pass   = diagram_passes_minimum(raw_scores, pending_rubric)
+        log.info(
+            "diagram.evaluated",
+            session_id = session_id,
+            stage_n    = stage_n,
+            summary    = diagram_summary(raw_scores),
+            passes     = diagram_pass,
+        )
+
+    # ── Curriculum concepts for Jordan probing guide ──────────────────────
+    all_concept_ids = (
+        spec.get("all_concept_ids")
+        or spec.get("concepts_tested")
+        or []
+    )
+    curriculum_concepts: list[dict] = []
+    if all_concept_ids:
+        try:
+            from connectionsphere_factory.curriculum import CONCEPT_BY_ID
+            for cid in all_concept_ids:
+                c = CONCEPT_BY_ID.get(cid)
+                if c:
+                    curriculum_concepts.append({
+                        "concept_id":         c.id,
+                        "name":               c.name,
+                        "solicit_drawing":    c.solicit_drawing,
+                        "jordan_probes":      c.jordan_probes,
+                        "jordan_minimum_bar": c.jordan_minimum_bar,
+                        "faang_signal":       c.faang_signal,
+                        "drawing_rubric": [
+                            {"label": r.label, "description": r.description,
+                             "required": r.required}
+                            for r in c.drawing_rubric
+                        ],
+                    })
+        except Exception as _e:
+            log.warning("session_engine.curriculum_lookup_failed", error=str(_e))
+
     raw = render_and_call("assess_submission.j2", {
         "problem_statement":     store.load_field(session_id, "problem_statement"),
         "candidate_level":       store.load_field(session_id, "candidate_level"),
@@ -227,6 +296,7 @@ def process_submission(
         "fsm_mermaid":           fsm.mermaid(),
         "progress":              fsm.context.progress_summary,
         "confirmed_concepts":    dll.confirmed_labels,
+        "accumulated_concepts":  accumulated_this_stage,
         "opening_question":      spec.get("opening_question", ""),
         "minimum_bar":           spec.get("minimum_bar", ""),
         "strong_answer_signals": spec.get("strong_answer_signals", []),
@@ -235,6 +305,10 @@ def process_submission(
         "probe_limit":           probe_limit,
         "probe_history":         probe_history,
         "candidate_answer":      answer,
+        # E) diagram fields
+        "has_candidate_diagram": bool(images),
+        "curriculum_concepts":   curriculum_concepts,
+        "diagram_scores":        diagram_scores,
     }, images=images or [])
 
     verdict               = raw.get("verdict", "NOT_MET")
@@ -242,6 +316,49 @@ def process_submission(
     probe                 = raw.get("probe")
     concepts_demonstrated = raw.get("concepts_demonstrated", [])
     concepts_missing      = raw.get("concepts_missing", [])
+    confidence_scores     = raw.get("confidence_scores", {})
+
+    # ── diagram_request: extract + persist rubric for next submission ──
+    diagram_request: dict | None = raw.get("diagram_request")
+    if isinstance(diagram_request, dict) and diagram_request:
+        pending = diagram_request.get("rubric") or []
+        store.save_field(session_id, f"pending_diagram_rubric_{stage_n}", pending)
+        log.info(
+            "diagram.request_fired",
+            session_id   = session_id,
+            stage_n      = stage_n,
+            concept_id   = diagram_request.get("concept_id", ""),
+            required     = diagram_request.get("required", False),
+            rubric_items = len(pending),
+        )
+    else:
+        diagram_request = None
+        store.save_field(session_id, f"pending_diagram_rubric_{stage_n}", [])
+
+    # ── Concept accumulation (semilattice) ────────────────────────────
+    record_fragment(session_id, stage_n, answer)
+    accumulated = accumulate_concepts(
+        session_id, stage_n, concepts_demonstrated, confidence_scores,
+    )
+    lattice = evaluate_concepts(session_id, stage_n)
+
+    if verdict == "PARTIAL" and lattice["passed"]:
+        log.info(
+            "verdict.upgraded_by_lattice",
+            session_id  = session_id,
+            stage_n     = stage_n,
+            accumulated = sorted(lattice["accumulated"]),
+        )
+        verdict  = "CONFIRMED"
+        feedback = (
+            feedback.rstrip()
+            + " — and with that, you've demonstrated everything needed for this stage."
+        )
+        probe = None
+
+    # Update concepts_missing from lattice (authoritative source)
+    concepts_missing = sorted(lattice["missing"])
+    # ── End concept accumulation ──────────────────────────────────────
 
     if dll.current:
         dll.current.add_turn("claude", feedback, turn_type="assessment")
@@ -276,6 +393,8 @@ def process_submission(
         concepts_missing      = concepts_missing,
         next_url              = next_url,
         session_complete      = fsm.state == State.SESSION_COMPLETE,
+        diagram_request       = diagram_request,
+        diagram_scores        = diagram_scores,
     )
 
 
@@ -361,9 +480,6 @@ def _generate_scene(problem_statement: str, candidate_level: str) -> dict[str, A
 
 
 def _concepts_for_stage(problem_statement: str, stage_n: int) -> list[str]:
-    stage_concepts = {
-        1: ["requirements_clarification", "scale_estimation", "api_design"],
-        2: ["data_model", "storage_choice", "schema_design"],
-        3: ["system_components", "scalability", "fault_tolerance"],
-    }
-    return stage_concepts.get(stage_n, [f"concept_{stage_n}_a", f"concept_{stage_n}_b"])
+    """Return required concepts for a stage. Canonical source: concept_store."""
+    from connectionsphere_factory.engine.concept_store import get_required
+    return sorted(get_required(stage_n))
