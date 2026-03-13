@@ -9,7 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://system-design.connectaiml.com"><img src="https://img.shields.io/badge/%F0%9F%8E%99%EF%B8%8F_Launch_Web_App-system--design.connectaiml.com-c8ff00?style=for-the-badge" alt="Launch Web App" /></a>
+  <a href="https://system-design.connectaiml.com/docs"><img src="https://img.shields.io/badge/API_Explorer-system--design.connectaiml.com%2Fdocs-c8ff00?style=for-the-badge" alt="API Explorer" /></a>
+</p>
+<p align="center">
+  Interview UI: <code>https://system-design.connectaiml.com/session/{id}/interview</code>
 </p>
 
 <p align="center">
@@ -36,7 +39,20 @@ Give it a problem statement — *"Design YouTube"*, *"Design a hotel reservation
 
 Built around the curriculum of *System Design Interview — An Insider's Guide* (Volumes 1 & 2, Alex Xu).
 
-**Try it now →** [system-design.connectaiml.com](https://system-design.connectaiml.com)
+### Try it now
+
+```bash
+# 1. Create a session (returns a session_id)
+curl -X POST https://system-design.connectaiml.com/sessions \
+  -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"problem_statement": "Design a URL shortener", "candidate_name": "Your Name"}'
+
+# 2. Open the interview UI in your browser
+#    → https://system-design.connectaiml.com/session/{session_id}/interview
+```
+
+The interview UI is a single-page voice interface — Alex teaches, Jordan interviews, you speak your answers.
 
 ---
 
@@ -158,9 +174,24 @@ Alex reads the concept set to decide what to teach. Jordan reads the same set to
 
 ## Quick Start
 
-**Live instance** — no setup needed: **[system-design.connectaiml.com](https://system-design.connectaiml.com)**
+### Use the live instance
 
-**Run locally:**
+```bash
+# 1. Create a session
+curl -X POST https://system-design.connectaiml.com/sessions \
+  -H "X-API-Key: YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"problem_statement": "Design YouTube", "candidate_name": "Your Name"}'
+
+# Response includes session_id, e.g. "a3f7c2d1"
+
+# 2. Open the interview UI
+#    https://system-design.connectaiml.com/session/a3f7c2d1/interview
+```
+
+API explorer: **[system-design.connectaiml.com/docs](https://system-design.connectaiml.com/docs)**
+
+### Run locally
 
 ```bash
 # 1. Install UV (skip if already installed)
