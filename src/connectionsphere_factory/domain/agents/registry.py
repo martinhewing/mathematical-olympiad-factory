@@ -27,6 +27,8 @@ class AgentType(Enum):
 
 # States where the tutor agent is active
 _TUTOR_STATES = {
+    "Concept Teach",
+    "Concept Teach Check",
     "Teach",
     "Teach Comprehension Check",
     "TEACH",
