@@ -269,3 +269,203 @@ def _merge(
         "concepts_tested": [c.id for c in concepts],
         "opening_question": enrichment.get("greeting", ""),  # TTS in teach phase
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Per-concept spec builders (new architecture)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def build_single_concept_teach_spec(
+    session_id:           str,
+    concept:              Concept,
+    candidate_first_name: str,
+    candidate_level:      str,
+    problem_statement:    str,
+    concept_index:        int,
+    concepts_total:       int,
+) -> dict:
+    """
+    Build Alex's teach spec for a single concept.
+
+    One Claude call via teach_concept.j2. Returns a spec dict that the
+    session engine caches under stage_specs[str(stage_n)].
+
+    The spec is a strict superset of what the UI expects from a teach stage —
+    all existing fields plus the per-concept additions needed by the whiteboard.
+
+    Args:
+        session_id:           For logging.
+        concept:              The Concept dataclass from curriculum.py.
+        candidate_first_name: Alex addresses the candidate by name.
+        candidate_level:      Calibrates tone and depth.
+        problem_statement:    Grounds analogy and example in the real problem.
+        concept_index:        0-based position in session concept list (for "4 of 9" display).
+        concepts_total:       Total concepts selected for this session.
+
+    Returns:
+        dict with all fields expected by voice.py _stage_text(), teach_check.j2,
+        and the whiteboard UI.
+    """
+    rubric_dicts = [
+        {"label": r.label, "description": r.description, "required": r.required}
+        for r in concept.drawing_rubric
+    ]
+
+    log.info(
+        "teach_spec.single_concept.start",
+        session_id   = session_id,
+        concept_id   = concept.id,
+        concept_index = concept_index,
+    )
+
+    spec = render_and_call(
+        "teach_concept.j2",
+        {
+            "candidate_first_name": candidate_first_name,
+            "candidate_level":      candidate_level,
+            "problem_statement":    problem_statement,
+            "concept_name":         concept.name,
+            "concept_id":           concept.id,
+            "book_pages":           concept.book_pages,
+            "concept_index":        concept_index,
+            "concepts_total":       concepts_total,
+            "core_facts":           concept.core_facts,
+            "why_it_matters":       concept.why_it_matters,
+            "jordan_minimum_bar":   concept.jordan_minimum_bar,
+            "faang_signal":         concept.faang_signal,
+            "common_mistakes":      concept.common_mistakes,
+            "alex_analogy_seed":    concept.alex_analogy_seed,
+            "solicit_drawing":      concept.solicit_drawing,
+            "drawing_rubric":       rubric_dicts,
+        },
+        max_tokens = 1200,
+    )
+
+    log.info(
+        "teach_spec.single_concept.done",
+        session_id = session_id,
+        concept_id = concept.id,
+    )
+
+    # Normalise — ensure all fields the engine and UI need are present
+    spec.setdefault("stage_title",             concept.name)
+    spec.setdefault("concept_id",              concept.id)
+    spec.setdefault("agent",                   "alex")
+    spec.setdefault("greeting",                "")
+    spec.setdefault("explanation",             " ".join(concept.core_facts))
+    spec.setdefault("analogy",                 concept.alex_analogy_seed)
+    spec.setdefault("example",                 "")
+    spec.setdefault("probe_warning",           concept.jordan_probes[0] if concept.jordan_probes else "")
+    spec.setdefault("comprehension_check",     "")
+    spec.setdefault("comprehension_check_mode","drawing" if concept.solicit_drawing else "verbal")
+    spec.setdefault("transition",              "")
+    spec.setdefault("ready_summary",           "")
+    spec.setdefault("minimum_bar",             concept.jordan_minimum_bar)
+    spec.setdefault("solicit_drawing",         concept.solicit_drawing)
+    spec.setdefault("drawing_rubric",          rubric_dicts)
+    spec.setdefault("concepts_tested",         [concept.id])
+
+    # Fields expected by voice.py _stage_text() in teach phase
+    spec.setdefault("concepts", [{
+        "name":        concept.name,
+        "explanation": " ".join(concept.core_facts),
+        "example":     spec.get("analogy", concept.alex_analogy_seed),
+        "probe_warning": concept.jordan_probes[0] if concept.jordan_probes else "",
+    }])
+
+    return spec
+
+
+def build_single_concept_jordan_spec(
+    session_id:          str,
+    concept:             Concept,
+    problem_statement:   str,
+    candidate_level:     str,
+    concept_index:       int,
+    concepts_total:      int,
+    concepts_confirmed:  list[str],
+) -> dict:
+    """
+    Build Jordan's stage spec for a single concept.
+
+    One Claude call via generate_concept_stage.j2. Claude generates only
+    the opening_question and scene_hook — everything else (probes, minimum
+    bar, signals, rubric) comes from curriculum.py and is passed through.
+
+    Args:
+        session_id:          For logging.
+        concept:             The Concept dataclass from curriculum.py.
+        problem_statement:   Grounds the opening question in the real problem.
+        candidate_level:     Calibrates Jordan's question difficulty.
+        concept_index:       0-based position (for "4 of 9" display).
+        concepts_total:      Total concepts selected for this session.
+        concepts_confirmed:  concept_ids already confirmed earlier this session.
+
+    Returns:
+        dict with all fields expected by stages.py GET route, assess_submission.j2,
+        and the whiteboard UI.
+    """
+    rubric_dicts = [
+        {"label": r.label, "description": r.description, "required": r.required}
+        for r in concept.drawing_rubric
+    ]
+
+    # Build strong/weak answer signals from curriculum fields
+    # jordan_probes[0] is the first probe — use core_facts as signals fallback
+    strong_signals = [concept.faang_signal] if concept.faang_signal else []
+    weak_signals   = concept.common_mistakes[:2] if concept.common_mistakes else []
+
+    log.info(
+        "teach_spec.jordan_concept.start",
+        session_id    = session_id,
+        concept_id    = concept.id,
+        concept_index = concept_index,
+    )
+
+    spec = render_and_call(
+        "generate_concept_stage.j2",
+        {
+            "problem_statement":   problem_statement,
+            "candidate_level":     candidate_level,
+            "concept_name":        concept.name,
+            "concept_id":          concept.id,
+            "concept_index":       concept_index,
+            "concepts_total":      concepts_total,
+            "concepts_confirmed":  concepts_confirmed,
+            "jordan_minimum_bar":  concept.jordan_minimum_bar,
+            "faang_signal":        concept.faang_signal,
+            "jordan_probes":       concept.jordan_probes,
+            "common_mistakes":     concept.common_mistakes,
+            "strong_answer_signals": strong_signals,
+            "weak_answer_signals":   weak_signals,
+            "solicit_drawing":     concept.solicit_drawing,
+            "drawing_rubric":      rubric_dicts,
+        },
+        max_tokens = 800,
+    )
+
+    log.info(
+        "teach_spec.jordan_concept.done",
+        session_id = session_id,
+        concept_id = concept.id,
+    )
+
+    # Normalise — ensure all fields the engine and UI need are present
+    spec.setdefault("stage_title",           concept.name)
+    spec.setdefault("concept_id",            concept.id)
+    spec.setdefault("agent",                 "jordan")
+    spec.setdefault("scene_hook",            "")
+    spec.setdefault("opening_question",      "")
+    spec.setdefault("minimum_bar",           concept.jordan_minimum_bar)
+    spec.setdefault("strong_answer_signals", strong_signals)
+    spec.setdefault("weak_answer_signals",   weak_signals)
+    spec.setdefault("probe_questions",       concept.jordan_probes)
+    spec.setdefault("concepts_tested",       [concept.id])
+    spec.setdefault("solicit_drawing",       concept.solicit_drawing)
+    spec.setdefault("drawing_rubric",        rubric_dicts)
+
+    # assess_submission.j2 reads these field names
+    spec.setdefault("strong_answer_signals", strong_signals)
+    spec.setdefault("weak_answer_signals",   weak_signals)
+
+    return spec

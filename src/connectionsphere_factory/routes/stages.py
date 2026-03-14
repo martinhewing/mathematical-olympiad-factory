@@ -58,10 +58,73 @@ def get_stage(session_id: str, stage_n: int):
         "probes_remaining":  probe_limit - probe_rounds,
         "submit_url":        f"/session/{session_id}/stage/{stage_n}/submit",
         "comprehension_check": spec.get("comprehension_check", ""),
+        "comprehension_check_mode": spec.get("comprehension_check_mode", "verbal"),
         "concepts":          spec.get("concepts", []),
         "greeting":          spec.get("greeting", ""),
         "agent_name":        state.get("agent_name", ""),
         "agent_role":        state.get("agent_role", ""),
+        # Per-concept fields (populated for concept-architecture sessions)
+        "agent":             state.get("agent", spec.get("agent", "")),
+        "concept_id":        state.get("concept_id", spec.get("concept_id", "")),
+        "scene_hook":        spec.get("scene_hook", ""),
+        "solicit_drawing":   spec.get("solicit_drawing", False),
+        "drawing_rubric":    spec.get("drawing_rubric", []),
+        "concept_index":     state.get("concept_index", 0),
+        "concepts_total":    state.get("concepts_total", 0),
+        "concepts_confirmed":state.get("concepts_confirmed", []),
+        "reteach_count":     result[0].context.reteach_count if result else 0,
+    }
+
+
+
+
+@router.get("/session/{session_id}/progress")
+def get_progress(session_id: str):
+    """
+    Per-concept progress for this session.
+
+    Returns a breakdown of all concepts selected for this session:
+    which are confirmed, which are flagged, which are pending, and which
+    is currently active. Used by the UI progress bar.
+
+    Only meaningful for sessions using the per-concept architecture
+    (concept_ids will be empty for legacy sessions).
+    """
+    if not store.exists(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    result = engine.load_session(session_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    fsm, _ = result
+    ctx    = fsm.context
+
+    # Build a per-concept status list in curriculum order
+    concept_statuses = []
+    for cid in ctx.concept_ids:
+        if cid in ctx.concepts_confirmed:
+            status = "confirmed"
+        elif cid in ctx.concepts_flagged:
+            status = "flagged"
+        elif cid == ctx.current_concept_id:
+            status = "current"
+        else:
+            status = "pending"
+        concept_statuses.append({"concept_id": cid, "status": status})
+
+    return {
+        "session_id":         session_id,
+        "total":              ctx.concepts_total,
+        "current_index":      ctx.concept_index,
+        "current_concept_id": ctx.current_concept_id,
+        "confirmed":          ctx.concepts_confirmed,
+        "flagged":            ctx.concepts_flagged,
+        "pending":            ctx.concepts_pending,
+        "concepts":           concept_statuses,
+        "all_done":           ctx.all_concepts_done,
+        "phase":              fsm.phase,
+        "agent":              fsm.state.agent,
     }
 
 
@@ -169,7 +232,10 @@ def teach_complete(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, dll = result
     from connectionsphere_factory.domain.fsm.states import State as _State
-    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:
+    if fsm.state in {
+        _State.TEACH, _State.TEACH_CHECK,
+        _State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK, _State.CONCEPT_STAGE,
+    }:
         fsm.transition_to(_State.TEACH_CHECK,  trigger="comprehension_skipped")
         fsm.transition_to(_State.REQUIREMENTS, trigger="teach_complete")
         dll.current.confirm({})

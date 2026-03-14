@@ -27,12 +27,27 @@ def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
     agent      = get_agent_for_state(fsm_state)
     voice_id   = agent.voice_id(_settings())
     first_name = store.load_field(session_id, "candidate_first_name") or "there"
-    # Teach phase: use lesson greeting + lesson content
-    if fsm_state in {"Teach", "Teach Comprehension Check"}:
-        greeting = agent.greeting(first_name)
-        lesson = spec.get("greeting", "")
-        check = spec.get("comprehension_check", "")
-        parts = [p for p in [greeting, lesson, check] if p]
+    # Teach phase: determine TTS text based on session architecture
+    _TEACH_STATES = {
+        "Teach", "Teach Comprehension Check",
+        "Concept Teach", "Concept Teach Check",
+    }
+    _JORDAN_STATES = {"Concept Stage"}
+    if fsm_state in _TEACH_STATES:
+        greeting = spec.get("greeting", "")
+        check    = spec.get("comprehension_check", "")
+        # For concept sessions, just speak the greeting —
+        # full lesson is shown on screen. Fast TTS (~150 chars).
+        # For legacy sessions, include check question too.
+        if fsm_state in {"Concept Teach", "Concept Teach Check"}:
+            parts = [p for p in [greeting] if p]
+        else:
+            parts = [p for p in [greeting, check] if p]
+    elif fsm_state in _JORDAN_STATES:
+        # Concept stage: scene hook + opening question
+        scene_hook = spec.get("scene_hook", "")
+        question   = spec.get("opening_question", "")
+        parts      = [p for p in [scene_hook, question] if p]
     else:
         scene_data = store.load_field(session_id, "scene") or {}
         scene      = scene_data.get("scene", "")
@@ -297,6 +312,51 @@ html, body {{
   line-height: 1.6;
   overflow: hidden;
 }}
+
+
+/* ── Concept progress pills ──────────────────────────────────── */
+.progress-bar {{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
+}}
+.progress-bar::-webkit-scrollbar {{ display: none; }}
+
+.concept-pill {{
+  flex-shrink: 0;
+  height: 6px;
+  width: 24px;
+  border-radius: 3px;
+  background: var(--subtle);
+  transition: background 0.3s, width 0.3s;
+  cursor: default;
+  position: relative;
+}}
+.concept-pill[title]:hover::after {{
+  content: attr(title);
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 10px;
+  white-space: nowrap;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+  z-index: 100;
+}}
+.concept-pill.confirmed  {{ background: var(--confirm); }}
+.concept-pill.current-alex {{ background: var(--accent); width: 32px; }}
+.concept-pill.current-jordan {{ background: var(--partial); width: 32px; }}
+.concept-pill.flagged    {{ background: var(--danger); }}
 
 /* ── Top bar ─────────────────────────────────────────────────── */
 .topbar {{
@@ -1016,6 +1076,7 @@ html, body {{
       <span class="candidate-name">{name}</span>
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="stage-indicator" id="stage-indicator">Stage —</span>
+      <div class="progress-bar" id="progress-bar"></div>
         <button id="back-to-alex-btn" onclick="backToAlex()" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:3px 10px;border-radius:3px;cursor:pointer;">← Alex</button>
       </div>
     </div>
@@ -1095,6 +1156,32 @@ function startTimer() {{
   }}, 1000);
 }}
 
+
+// ── Progress bar ─────────────────────────────────────────────────
+async function loadProgress() {{
+  try {{
+    const res  = await fetch(`/session/${{SESSION_ID}}/progress`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const bar  = document.getElementById('progress-bar');
+    if (!bar || !data.concepts || !data.concepts.length) return;
+
+    bar.innerHTML = data.concepts.map(c => {{
+      let cls   = 'concept-pill';
+      const st  = c.status;
+      if (st === 'confirmed')     cls += ' confirmed';
+      else if (st === 'flagged')  cls += ' flagged';
+      else if (st === 'current' && data.agent === 'alex')   cls += ' current-alex';
+      else if (st === 'current' && data.agent === 'jordan') cls += ' current-jordan';
+      // Convert concept_id to display name: "load_balancer" → "Load Balancer"
+      const label = c.concept_id.replace(/_/g,' ').replace(/\w/g,l=>l.toUpperCase());
+      return `<div class="${{cls}}" title="${{label}}"></div>`;
+    }}).join('');
+  }} catch(e) {{
+    // Non-fatal — progress bar stays empty
+  }}
+}}
+
 // ── Load stage ───────────────────────────────────────────────────
 async function loadStage(n) {{
   currentStage = n;
@@ -1110,6 +1197,7 @@ async function loadStage(n) {{
   try {{
     const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);
     stageData  = await res.json();
+    loadProgress();  // refresh concept pills (non-blocking)
 
     // Show question + scene based on phase
     const isTeach = (stageData.phase === 'teach');
@@ -1556,6 +1644,7 @@ function advanceStage(n) {{
   document.getElementById('assessment').className = 'assessment';
   document.getElementById('transcript-preview').className = 'transcript-preview';
   deactivateWhiteboard();
+  loadProgress();
   loadStage(n);
 }}
 

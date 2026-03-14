@@ -5,6 +5,13 @@ Factory Session Finite State Machine.
 
 mermaid() — renders FSM as Mermaid markup, piped into every Claude prompt.
 probe_limit_reached — when True, session engine must transition to FLAGGED.
+
+Per-concept architecture (new sessions):
+  advance_concept() — moves to next concept, resets counters.
+  CONCEPT_STAGE is the probe state; CONCEPT_TEACH/CHECK are Alex states.
+
+Legacy architecture (old sessions) is preserved — OOD_STAGE probe logic
+is unchanged and all legacy states/transitions remain valid.
 """
 
 from __future__ import annotations
@@ -34,7 +41,7 @@ class FactoryFSM:
     """
     Finite State Machine for the factory session.
     Enforces valid transitions and maintains a full audit trail.
-    Serialised to Postgres (sessions.fsm_state JSONB) after every transition.
+    Serialised to JSONB after every transition.
     """
 
     def __init__(
@@ -46,8 +53,8 @@ class FactoryFSM:
         problem_id:        str   = "",
         initial_state:     State = State.SESSION_START,
     ) -> None:
-        self._state:         State             = initial_state
-        self._context:       FSMContext        = FSMContext(
+        self._state:          State             = initial_state
+        self._context:        FSMContext        = FSMContext(
             candidate_name    = candidate_name,
             candidate_id      = candidate_id,
             candidate_level   = candidate_level,
@@ -94,14 +101,25 @@ class FactoryFSM:
 
     @property
     def probe_limit_reached(self) -> bool:
+        """
+        True when the probe limit has been reached on the current concept.
+
+        Covers both the new per-concept architecture (CONCEPT_STAGE) and
+        the legacy architecture (OOD_STAGE).
+        """
         return (
-            self._state == State.OOD_STAGE
+            self._state in {State.CONCEPT_STAGE, State.OOD_STAGE}
             and self._context.probe_rounds >= PROBE_LIMIT
         )
 
     @property
     def requires_voice(self) -> bool:
         return self._state.requires_voice
+
+    @property
+    def is_concept_session(self) -> bool:
+        """True if this session uses the new per-concept architecture."""
+        return bool(self._context.concept_ids)
 
     # ── Transitions ──────────────────────────────────────────────────────
 
@@ -121,10 +139,21 @@ class FactoryFSM:
         ))
 
         now = datetime.now().isoformat()
-        if new_state == State.REQUIREMENTS and self._context.simulate_started_at == "":
+
+        # ── Timestamp milestones ──────────────────────────────────────────
+        # New architecture milestones
+        if new_state == State.CONCEPT_STAGE and self._context.simulate_started_at == "":
             self._context.simulate_started_at = now
         if new_state == State.EVALUATE and self._context.evaluate_started_at == "":
             self._context.evaluate_started_at = now
+        if (new_state == State.CONCEPT_TEACH_CHECK
+                and self._state == State.CONCEPT_TEACH
+                and self._context.teach_completed_at == ""):
+            self._context.teach_completed_at = now
+
+        # Legacy architecture milestones (preserved)
+        if new_state == State.REQUIREMENTS and self._context.simulate_started_at == "":
+            self._context.simulate_started_at = now
         if new_state == State.TEACH_CHECK and self._context.teach_completed_at == "":
             self._context.teach_completed_at = now
 
@@ -133,9 +162,18 @@ class FactoryFSM:
         self._turns_in_state        = 0
 
     def increment_turn(self) -> None:
+        """
+        Increment turn counter and probe rounds.
+
+        For CONCEPT_STAGE (new): probe_rounds increments on each submission.
+        For OOD_STAGE (legacy): same behaviour, preserved.
+        For CONCEPT_TEACH_CHECK: teach_check_attempts increments.
+        """
         self._turns_in_state += 1
-        if self._state == State.OOD_STAGE:
+        if self._state in {State.CONCEPT_STAGE, State.OOD_STAGE}:
             self._context.probe_rounds += 1
+        elif self._state == State.CONCEPT_TEACH_CHECK:
+            self._context.teach_check_attempts += 1
 
     def can_transition_to(self, new_state: State) -> bool:
         return new_state in VALID_TRANSITIONS.get(self._state, set())
@@ -143,13 +181,50 @@ class FactoryFSM:
     def get_valid_transitions(self) -> set[State]:
         return VALID_TRANSITIONS.get(self._state, set()).copy()
 
+    # ── Per-concept helpers ───────────────────────────────────────────────
+
+    def advance_concept(self) -> None:
+        """
+        Advance to the next concept in the curriculum.
+
+        Delegates to context.advance_concept() which increments concept_index
+        and resets probe_rounds and reteach_count.
+
+        Call this from session_engine after Jordan CONFIRMS or FLAGS a concept,
+        before transitioning to CONCEPT_TEACH for the next concept or EVALUATE.
+        """
+        self._context.advance_concept()
+
+    def confirm_current_concept(self) -> None:
+        """Mark the current concept as confirmed. Call before advance_concept()."""
+        self._context.confirm_current_concept()
+
+    def flag_current_concept(self, reason: str = "") -> None:
+        """Mark the current concept as flagged. Call before advance_concept()."""
+        self._context.flag_current_concept(reason)
+
+    def increment_reteach(self) -> None:
+        """Called each time Alex reteaches the current concept."""
+        self._context.increment_reteach()
+
+    @property
+    def current_concept_id(self) -> str | None:
+        """Convenience accessor for the current concept ID."""
+        return self._context.current_concept_id
+
+    @property
+    def all_concepts_done(self) -> bool:
+        """True when all concepts have been advanced past."""
+        return self._context.all_concepts_done
+
     # ── Claude prompt context ─────────────────────────────────────────────
 
     def prompt_context(self) -> dict[str, Any]:
-        return {
+        ctx = {
             "current_state":       self._state.value,
             "state_description":   self._state.description,
             "phase":               self.phase,
+            "agent":               self._state.agent,
             "turns_in_state":      self._turns_in_state,
             "probe_rounds":        self._context.probe_rounds,
             "probe_limit":         PROBE_LIMIT,
@@ -162,18 +237,39 @@ class FactoryFSM:
             "recent_history":      [t.to_dict() for t in self._history[-5:]],
             "fsm_mermaid":         self.mermaid(),
         }
+        # Per-concept extras
+        if self.is_concept_session:
+            ctx["concept_id"]          = self._context.current_concept_id
+            ctx["concept_index"]       = self._context.concept_index
+            ctx["concepts_total"]      = self._context.concepts_total
+            ctx["concepts_confirmed"]  = self._context.concepts_confirmed
+            ctx["concepts_flagged"]    = self._context.concepts_flagged
+            ctx["reteach_count"]       = self._context.reteach_count
+        return ctx
 
     def mermaid(self) -> str:
         """
-        Renders FSM as Mermaid stateDiagram-v2.
+        Renders the current FSM position as Mermaid stateDiagram-v2.
         Current state marked ★, valid next states marked →.
-        Piped into every Claude prompt as the orientation layer.
+        Legacy states omitted for new-architecture sessions to reduce noise.
         """
-        valid_next = {s.name for s in self.get_valid_transitions()}
-        lines      = ["stateDiagram-v2"]
+        valid_next   = {s.name for s in self.get_valid_transitions()}
+        legacy_names = {
+            "TEACH", "TEACH_CHECK", "REQUIREMENTS",
+            "SYSTEM_DESIGN", "NODE_SESSION", "OOD_STAGE",
+        }
+
+        lines = ["stateDiagram-v2"]
 
         for from_state, targets in VALID_TRANSITIONS.items():
+            # Skip legacy states in concept sessions
+            if self.is_concept_session and from_state.name in legacy_names:
+                continue
+
             for to_state in targets:
+                if self.is_concept_session and to_state.name in legacy_names:
+                    continue
+
                 from_label = from_state.name
                 to_label   = to_state.name
 
@@ -196,7 +292,7 @@ class FactoryFSM:
             "state":     self._state.value,
             "timestamp": datetime.now().isoformat(),
         })
-        self._function_calls    = self._function_calls[-5:]
+        self._function_calls        = self._function_calls[-5:]
         self._context.function_path = [fc["function"] for fc in self._function_calls]
 
     # ── Serialisation ─────────────────────────────────────────────────────
@@ -217,15 +313,12 @@ class FactoryFSM:
             (s for s in State if s.value == state_value),
             State.SESSION_START,
         )
-
         fsm = cls(initial_state=state)
         fsm._context        = FSMContext.from_dict(data.get("context", {}))
         fsm._turns_in_state = data.get("turns_in_state", 0)
-
         for item in data.get("history", []):
             if isinstance(item, dict):
                 fsm._history.append(Transition.from_dict(item))
-
         fsm._function_calls = data.get("function_calls", [])
         return fsm
 
@@ -234,8 +327,9 @@ class FactoryFSM:
             "current_state":       self._state.value,
             "state_name":          self._state.name,
             "phase":               self.phase,
+            "agent":               self._state.agent,
             "is_terminal":         self._state.is_terminal,
-            "requires_voice":      self._state.requires_voice,
+            "requires_voice":      self.requires_voice,
             "description":         self._state.description,
             "valid_transitions":   [s.value for s in self.get_valid_transitions()],
             "turns_in_state":      self._turns_in_state,
@@ -247,11 +341,12 @@ class FactoryFSM:
         }
 
     def __repr__(self) -> str:
+        concept = f", concept={self._context.current_concept_id!r}" if self.is_concept_session else ""
         return (
             f"FactoryFSM("
             f"state={self._state.name!r}, "
             f"phase={self.phase!r}, "
-            f"turns={self._turns_in_state}, "
-            f"candidate={self._context.candidate_name!r}"
+            f"turns={self._turns_in_state}"
+            f"{concept}"
             f")"
         )
