@@ -63,7 +63,8 @@ async def get_stage_audio_file(session_id: str, stage_n: int):
         raise HTTPException(status_code=404, detail="Session not found")
     import connectionsphere_factory.session_store as _store
     _fsm_result = engine.load_session(session_id)
-    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in {"Teach", "Teach Comprehension Check"}) else "interview"
+    _TEACH_VALS = {"Teach", "Teach Comprehension Check", "Concept Teach", "Concept Teach Check"}
+    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in _TEACH_VALS) else "interview"
     savepath = audio_path(session_id, stage_n, _phase)
     if not Path(savepath).exists():
         text, voice_id = _stage_text(session_id, stage_n)
