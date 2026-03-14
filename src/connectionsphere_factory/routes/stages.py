@@ -232,20 +232,20 @@ def teach_complete(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, dll = result
     from connectionsphere_factory.domain.fsm.states import State as _State
-    if fsm.state in {
-        _State.TEACH, _State.TEACH_CHECK,
-        _State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK, _State.CONCEPT_STAGE,
-    }:
+    if fsm.state in {_State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK}:
+        # Concept session: skip Alex check, hand to Jordan for this concept
+        fsm.transition_to(_State.CONCEPT_STAGE, trigger="comprehension_skipped")
+        dll.current.confirm({})
+        store.save(session_id, fsm, dll)
+    elif fsm.state in {_State.TEACH, _State.TEACH_CHECK}:
+        # Legacy session
         fsm.transition_to(_State.TEACH_CHECK,  trigger="comprehension_skipped")
         fsm.transition_to(_State.REQUIREMENTS, trigger="teach_complete")
         dll.current.confirm({})
         dll.add_stage("requirements_001", "requirements")
-        # Save Alex's spec before clearing, so we can restore on back
         current_specs = store.load_field(session_id, "stage_specs") or {}
         if "1" in current_specs:
             store.save_field(session_id, "teach_spec", current_specs["1"])
-
-
         store.save(session_id, fsm, dll)
     # Pre-generate Jordan's stage spec so handover is instant
     try:
