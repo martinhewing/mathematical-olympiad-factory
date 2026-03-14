@@ -96,12 +96,6 @@ def create_session(
 
     store.save(session_id, fsm, dll)
 
-    # Pre-generate lesson so interview page loads instantly
-    try:
-        get_or_generate_stage(session_id, 1)
-        log.info("session.lesson_pregenerated", session_id=session_id)
-    except Exception as e:
-        log.warning("session.lesson_pregenerate_failed", session_id=session_id, error=str(e))
 
     log.info(
         "session.created",

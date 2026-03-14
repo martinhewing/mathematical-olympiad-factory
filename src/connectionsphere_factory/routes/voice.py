@@ -1198,6 +1198,7 @@ async function loadStage(n) {{
     const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);
     stageData  = await res.json();
     loadProgress();  // refresh concept pills (non-blocking)
+    if (stageData.stage_title) document.getElementById('stage-indicator').textContent = stageData.stage_title;
 
     // Show question + scene based on phase
     const isTeach = (stageData.phase === 'teach');
