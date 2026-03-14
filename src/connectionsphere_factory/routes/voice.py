@@ -30,14 +30,9 @@ def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
     # Teach phase: use lesson greeting + lesson content
     if fsm_state in {"Teach", "Teach Comprehension Check"}:
         greeting = agent.greeting(first_name)
-        lesson   = spec.get("greeting", "")
-        concepts = spec.get("concepts", [])
-        concept_text = "  ".join(
-            f"{c.get('name','')}: {c.get('explanation','')}  For example: {c.get('example','')}"
-            for c in concepts[:3]
-        )
+        lesson = spec.get("greeting", "")
         check = spec.get("comprehension_check", "")
-        parts = [p for p in [greeting, lesson, concept_text, check] if p]
+        parts = [p for p in [greeting, lesson, check] if p]
     else:
         scene_data = store.load_field(session_id, "scene") or {}
         scene      = scene_data.get("scene", "")
