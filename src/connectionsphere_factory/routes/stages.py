@@ -236,6 +236,11 @@ def teach_complete(session_id: str):
         # Concept session: skip Alex check, hand to Jordan for this concept
         fsm.transition_to(_State.CONCEPT_STAGE, trigger="comprehension_skipped")
         dll.current.confirm({})
+        # Clear Alex's cached spec so Jordan's spec is generated fresh
+        _specs = store.load_field(session_id, "stage_specs") or {}
+        _stage_key = f"concept_{fsm.context.concept_index + 1}_alex"
+        _specs.pop(_stage_key, None)
+        store.save_field(session_id, "stage_specs", _specs)
         store.save(session_id, fsm, dll)
     elif fsm.state in {_State.TEACH, _State.TEACH_CHECK}:
         # Legacy session
