@@ -60,7 +60,7 @@ async def get_stage_audio_file(session_id: str, stage_n: int):
         await generate_tts(text, save_path=savepath, voice_id=voice_id)
     return Response(
         content    = Path(savepath).read_bytes(),
-        media_type = "audio/wav",
+        media_type = "audio/mpeg",
         headers    = {"Content-Disposition": "inline"},
     )
 
@@ -120,7 +120,7 @@ async def play_stage_audio(session_id: str, stage_n: int):
   <div class="pulse" id="dot"></div>
   <span id="status">INTERVIEWER SPEAKING</span>
   <audio id="audio" autoplay>
-    <source src="{audio_url}" type="audio/wav">
+    <source src="{audio_url}" type="audio/mpeg">
   </audio>
   <script>
     const audio  = document.getElementById('audio');
@@ -173,7 +173,7 @@ async def speak_text(session_id: str, payload: dict):
 
     return Response(
         content    = audio,
-        media_type = "audio/wav",
+        media_type = "audio/mpeg",
         headers    = {"Content-Disposition": "inline"},
     )
 
@@ -192,7 +192,7 @@ async def submit_voice_answer(
         raise HTTPException(status_code=404, detail="Session not found")
 
     audio_bytes  = await audio.read()
-    content_type = audio.content_type or "audio/wav"
+    content_type = audio.content_type or "audio/mpeg"
 
     if len(audio_bytes) < 1000:
         raise HTTPException(status_code=422, detail="Audio too short")

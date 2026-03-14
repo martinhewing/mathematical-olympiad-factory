@@ -15,9 +15,10 @@ from connectionsphere_factory.logging import get_logger
 log = get_logger(__name__)
 
 _OUTPUT_FORMAT = {
-    "container":   "wav",
-    "encoding":    "pcm_f32le",
+    "container":   "mp3",
+    "encoding":    "mp3",
     "sample_rate": 44100,
+    "bit_rate":    128000,
 }
 
 
@@ -51,7 +52,7 @@ async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[b
     """Generate TTS and yield the full WAV in one chunk."""
     settings = _settings()
     import tempfile, os
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
     try:
         audio = await generate_tts(text, save_path=tmp, voice_id=voice_id)
@@ -65,4 +66,4 @@ async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[b
 
 def audio_path(session_id: str, stage_n: int, phase: str = "interview") -> str:
     settings = _settings()
-    return f"{settings.audio_storage_dir}/{session_id}_{phase}_stage_{stage_n}.wav"
+    return f"{settings.audio_storage_dir}/{session_id}_{phase}_stage_{stage_n}.mp3"
