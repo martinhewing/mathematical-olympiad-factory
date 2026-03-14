@@ -1300,7 +1300,12 @@ async function playStageAudio(n) {{
   }};
 
   setTimeout(() => {{ if (!audio.ended) enableRecording(); }}, 60000);
-  audio.play().catch(() => {{ label.textContent = 'no audio'; enableRecording(); }});
+  audio.play().catch(() => {{
+    // Autoplay blocked — show play button and enable recording
+    if (playBtn) {{ playBtn.textContent = '▶ Play audio'; playBtn.style.display = 'inline-block'; }}
+    label.textContent = 'tap ▶ to hear';
+    enableRecording();
+  }});
 }}
 
 function handleWhiteboardUpload(event) {{
