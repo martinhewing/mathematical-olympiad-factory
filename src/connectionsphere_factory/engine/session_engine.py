@@ -54,8 +54,12 @@ def create_session(
     )
     dll = FactoryConversationHistory()
 
-    fsm.transition_to(State.TEACH,        trigger="session_created")
-    node = dll.add_stage("requirements_001", "requirements")
+    # ── Per-concept architecture setup ──────────────────────────────
+    from connectionsphere_factory.engine.teach_spec import select_concepts_for_problem
+    _concepts = select_concepts_for_problem(problem_statement)
+    fsm.context.concept_ids = [c.id for c in _concepts]
+    fsm.transition_to(State.CONCEPT_TEACH, trigger="session_created")
+    node = dll.add_stage("concept_teach_001", "concept_teach")
 
     scene_data = _generate_scene(problem_statement, candidate_level.value)
     node.add_turn("claude", scene_data["scene"], turn_type="scene")
