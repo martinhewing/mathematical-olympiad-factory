@@ -1626,7 +1626,8 @@ async function handoverToJordan() {{
     try {{ audio.pause(); audio.src = ''; }} catch(e) {{}}
     await fetch(`/session/${{SESSION_ID}}/teach/complete`, {{method:'POST'}});
   }} catch(e) {{}}
-  advanceStage(currentStage);
+  // Reload same stage — FSM now on CONCEPT_STAGE, cache miss will get Jordan spec
+  loadStage(currentStage);
 }}
 
 async function backToAlex() {{
