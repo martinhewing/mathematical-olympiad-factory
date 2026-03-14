@@ -158,6 +158,7 @@ VALID_TRANSITIONS: dict[State, set[State]] = {
     # Per-concept teach loop
     State.CONCEPT_TEACH: {
         State.CONCEPT_TEACH_CHECK,
+        State.CONCEPT_STAGE,  # allow skip via Ready for Interview button
     },
     State.CONCEPT_TEACH_CHECK: {
         State.CONCEPT_STAGE,    # comprehension confirmed → hand to Jordan
