@@ -139,10 +139,20 @@ def teach_restart(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, dll = result
     from connectionsphere_factory.domain.fsm.states import State as _State
-    fsm.transition_to(_State.RESTART, trigger="back_to_teach"); fsm.transition_to(_State.SESSION_START, trigger="restarted"); fsm.transition_to(_State.TEACH, trigger="session_created")
-    # Reset dll to teach stage
-    dll = engine.FactoryConversationHistory()
-    dll.add_stage("teach_001", "teach")
+    if fsm.is_concept_session:
+        fsm.transition_to(_State.RESTART, trigger="back_to_teach")
+        fsm.transition_to(_State.SESSION_START, trigger="restarted")
+        fsm.transition_to(_State.CONCEPT_TEACH, trigger="session_created")
+        dll = engine.FactoryConversationHistory()
+        dll.add_stage("concept_teach_001", "concept_teach")
+        # Clear Jordan spec cache so Alex spec reloads
+        specs = store.load_field(session_id, "stage_specs") or {}
+        specs.pop("concept_1_jordan", None)
+        store.save_field(session_id, "stage_specs", specs)
+    else:
+        fsm.transition_to(_State.RESTART, trigger="back_to_teach"); fsm.transition_to(_State.SESSION_START, trigger="restarted"); fsm.transition_to(_State.TEACH, trigger="session_created")
+        dll = engine.FactoryConversationHistory()
+        dll.add_stage("teach_001", "teach")
     # Restore Alex's cached spec so page loads instantly
     teach_spec = store.load_field(session_id, "teach_spec")
     if teach_spec:
