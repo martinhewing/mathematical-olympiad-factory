@@ -296,7 +296,7 @@ def _interview_html(session_id, problem, name, scene, fsm_state, phase,
   --text:      #f0f0f0;
   --muted:     #666666;
   --subtle:    #333333;
-  --accent:    #c8ff00;
+  --accent:    #00cfff;
   --danger:    #ff4444;
   --confirm:   #00ff88;
   --partial:   #ffaa00;
@@ -1059,7 +1059,7 @@ html, body {{
     </div>
     <div class="teach-actions" id="teach-actions" style="display:none;padding:12px 24px;border-top:1px solid var(--border);">
       <button class="next-btn" id="ready-btn" onclick="handoverToJordan()" style="width:100%;text-align:center;">
-        Ready for interview →
+        Test me →
       </button>
     </div>
     <div class="audio-bar">
@@ -1644,7 +1644,7 @@ async function backToAlex() {{
   btn.textContent = '← Alex';
   // Re-enable the handover button
   const readyBtn = document.getElementById('ready-btn');
-  if (readyBtn) {{ readyBtn.disabled = false; readyBtn.textContent = 'Ready for interview →'; }}
+  if (readyBtn) {{ readyBtn.disabled = false; readyBtn.textContent = 'Test me →'; }}
   loadStage(1);
 }}
 

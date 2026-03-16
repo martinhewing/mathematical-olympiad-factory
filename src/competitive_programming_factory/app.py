@@ -187,13 +187,13 @@ def _scalar_html(title: str) -> str:
       --scalar-color-1:                        #f0f0f0 !important;
       --scalar-color-2:                        #999999 !important;
       --scalar-color-3:                        #555555 !important;
-      --scalar-color-accent:                   #c8ff00 !important;
+      --scalar-color-accent:                   #00cfff !important;
       --scalar-background-1:                   #0a0a0a !important;
       --scalar-background-2:                   #111111 !important;
       --scalar-background-3:                   #1a1a1a !important;
       --scalar-background-4:                   #222222 !important;
       --scalar-border-color:                   #222222 !important;
-      --scalar-button-1:                       #c8ff00 !important;
+      --scalar-button-1:                       #00cfff !important;
       --scalar-button-1-color:                 #000000 !important;
       --scalar-button-1-hover:                 #d4ff33 !important;
       --scalar-color-green:                    #00ff88 !important;
@@ -201,14 +201,14 @@ def _scalar_html(title: str) -> str:
       --scalar-color-orange:                   #ffaa00 !important;
       --scalar-color-yellow:                   #ffaa00 !important;
       --scalar-color-blue:                     #6699ff !important;
-      --scalar-color-purple:                   #c8ff00 !important;
+      --scalar-color-purple:                   #00cfff !important;
       --scalar-sidebar-background-1:           #0a0a0a !important;
       --scalar-sidebar-background-2:           #111111 !important;
       --scalar-sidebar-item-hover-background:  #1a1a1a !important;
       --scalar-sidebar-item-active-background: #1a1a1a !important;
       --scalar-sidebar-color-1:                #f0f0f0 !important;
       --scalar-sidebar-color-2:                #666666 !important;
-      --scalar-sidebar-color-active:           #c8ff00 !important;
+      --scalar-sidebar-color-active:           #00cfff !important;
       --scalar-sidebar-border-color:           #1a1a1a !important;
       --scalar-sidebar-search-background:      #111111 !important;
       --scalar-font:                           'DM Sans', sans-serif !important;
@@ -216,7 +216,7 @@ def _scalar_html(title: str) -> str:
     }}
 
     /* Title */
-    h1 {{ color: #c8ff00 !important; }}
+    h1 {{ color: #00cfff !important; }}
 
     /* Force dark background on scalar root elements */
     .scalar-app,
@@ -238,8 +238,8 @@ def _scalar_html(title: str) -> str:
     /* Active nav item accent */
     .sidebar-item--active,
     .sidebar-item.active {{
-      color: #c8ff00 !important;
-      border-left-color: #c8ff00 !important;
+      color: #00cfff !important;
+      border-left-color: #00cfff !important;
     }}
 
     /* Code blocks */
@@ -250,7 +250,7 @@ def _scalar_html(title: str) -> str:
 
     /* Buttons */
     .btn-primary, .scalar-button-primary {{
-      background: #c8ff00 !important;
+      background: #00cfff !important;
       color: #000 !important;
     }}
 
