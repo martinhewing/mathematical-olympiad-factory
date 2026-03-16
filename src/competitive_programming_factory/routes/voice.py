@@ -287,6 +287,15 @@ def _interview_html(session_id, problem, name, scene, fsm_state, phase,
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {{
+    delimiters: [
+      {{left: '$$', right: '$$', display: true}},
+      {{left: '$', right: '$', display: false}}
+    ]
+  }});"></script>
 <style>
 :root {{
   --bg:        #0a0a0a;
@@ -1076,6 +1085,7 @@ html, body {{
     <div class="candidate-header">
       <span class="candidate-name">{name}</span>
       <div style="display:flex;align-items:center;gap:12px;">
+        <span style="color:var(--muted);font-size:11px;">·</span>
         <span class="stage-indicator" id="stage-indicator">Stage —</span>
       <div class="progress-bar" id="progress-bar"></div>
         <button id="back-to-alex-btn" onclick="backToAlex()" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:3px 10px;border-radius:3px;cursor:pointer;">← Alistair</button>
