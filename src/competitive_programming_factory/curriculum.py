@@ -1008,7 +1008,7 @@ TOP SECTION — "Frobenius number formula":
       Arrow at n=7 labelled "g(3,5) = 7"
 
 MIDDLE SECTION — "Symmetry (Theorem C / Corollary 2)":
-  - Title: "Among {0, 1, ..., (r-1)(s-1)-1}:"
+  - Title: "Among {{0, 1, ..., (r-1)(s-1)-1}}:"
   - Two side-by-side count boxes:
       Left (green):  "½(r-1)(s-1)   achievable"
       Right (amber): "½(r-1)(s-1)   NOT achievable"
