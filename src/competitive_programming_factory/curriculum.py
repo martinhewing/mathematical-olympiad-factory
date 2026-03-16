@@ -248,13 +248,13 @@ Layout: two panels, left and right, separated by a vertical divider labelled "vs
 LEFT PANEL — "Naïve: fill 3L repeatedly":
 - A column of 14 small identical jug icons (simplified rectangle), labelled "×14"
 - One large "discard" icon (wastebasket outline) with label "7 × 5L discarded"
-- Caption below: "7 = 14×3 − 7×5   (expensive)"
+- Caption below: "7 = 14×3 - 7×5   (expensive)"
 - Amber border / small ✗ icon.
 
 RIGHT PANEL — "Efficient: fill 5L twice":
 - Two 5L jug icons
 - One 3L jug icon with a downward arrow labelled "discard once"
-- Caption below: "7 = 2×5 − 1×3   (minimal waste)"
+- Caption below: "7 = 2×5 - 1×3   (minimal waste)"
 - Green border / small ✓ icon.
 
 Below both panels: a single centred annotation box:
@@ -346,17 +346,17 @@ TOP SECTION — "The identity":
   - A centred display box containing the equation:
       ac + bd = 1   (gcd(c,d) = 1)
   - Two example rows below it:
-      c=3, d=5:   2×3 + (−1)×5 = 1
-      c=4, d=13:  (−3)×4 + 1×13 = 1
+      c=3, d=5:   2×3 + (-1)×5 = 1
+      c=4, d=13:  (-3)×4 + 1×13 = 1
   - Arrow from each example row to a small tick.
 
 BOTTOM SECTION — "The family of solutions":
-  - A horizontal number line labelled with integers from −3 to 10.
-  - The solution (a₀, b₀) = (2, −1) is marked with a filled dot at position a=2.
+  - A horizontal number line labelled with integers from -3 to 10.
+  - The solution (a₀, b₀) = (2, -1) is marked with a filled dot at position a=2.
   - Three other solutions are marked with open dots:
-      a = 2+5 = 7  (s=1),  a = 2+10 = 12 (s=2),  a = 2−5 = −3 (s=−1)
+      a = 2+5 = 7  (s=1),  a = 2+10 = 12 (s=2),  a = 2-5 = -3 (s=-1)
   - A horizontal arrow across the number line labelled "+d steps → another solution"
-  - Below the number line: "a = a₀ + ds,  b = b₀ − cs  for any integer s"
+  - Below the number line: "a = a₀ + ds,  b = b₀ - cs  for any integer s"
 
 Small callout box (bottom-right):
   "If gcd(r,s) = t: only multiples of t are achievable"
@@ -375,12 +375,12 @@ Footnote: "Figure 1-3 — Bézout: one solution generates infinitely many; GCD g
         ),
         DrawingRubricItem(
             label       = "Concrete example verified",
-            description = "At least one explicit pair (a,b) is computed and verified (e.g. 2×3−1×5=1).",
+            description = "At least one explicit pair (a,b) is computed and verified (e.g. 2×3-1×5=1).",
             required    = True,
         ),
         DrawingRubricItem(
             label       = "General solution family stated",
-            description = "Candidate states that (a+ds, b−cs) gives all solutions for integer s.",
+            description = "Candidate states that (a+ds, b-cs) gives all solutions for integer s.",
             required    = True,
         ),
         DrawingRubricItem(
@@ -729,7 +729,7 @@ ARROW down labelled "induction on n"
 
 BOX 3: "Inductive step: n ≥ 11"
   Content:
-    "n − 3 ≥ 8  →  n − 3 = 3a + 5b  (by IH)"
+    "n - 3 ≥ 8  →  n - 3 = 3a + 5b  (by IH)"
     "∴  n = 3(a+1) + 5b  ✓"
   Green border.
 
@@ -859,27 +859,27 @@ Layout: two columns labelled "Case s = 3t+1" and "Case s = 3t+2".
 COLUMN 1 — "s = 3t+1":
   Three stacked sub-boxes:
     "2s = s × 2   ✓"
-    "2s−1 = s + 3t   ✓"
-    "2s−2 = 3 × 2t   ✓"
+    "2s-1 = s + 3t   ✓"
+    "2s-2 = 3 × 2t   ✓"
   Each box has a green tick.
   Below: "All three base cases covered"
 
 COLUMN 2 — "s = 3t+2":
   Three stacked sub-boxes:
-    "2s = 3 × (2t+1) + (2t+2−(2t+1)×... [simplified]   ✓"
+    "2s = 3 × (2t+1) + (2t+2-(2t+1)×... [simplified]   ✓"
     → Use: "2s = 2(3t+2) = 6t+4 = 3(2t+1)+1 — hmm, simplify"
-    → Actually: "2s − 1 = 3(2t+1)   ✓"
-    → "2s − 2 = s + 3t   ✓"
+    → Actually: "2s - 1 = 3(2t+1)   ✓"
+    → "2s - 2 = s + 3t   ✓"
     → "2s = s × 2   ✓"
   Each box has a green tick.
 
 Centre divider: vertical line.
 
 Below both columns: shared box labelled "Inductive step":
-  "If n ≥ 2s−1, then n−3 ≥ 2s−4 ≥ 2(s−1)−2 = 2s−4 ..."
-  Simplify: "n − 3 ≥ 2(s−1) → apply induction hypothesis → n = 3(a+1) + sb ✓"
+  "If n ≥ 2s-1, then n-3 ≥ 2s-4 ≥ 2(s-1)-2 = 2s-4 ..."
+  Simplify: "n - 3 ≥ 2(s-1) → apply induction hypothesis → n = 3(a+1) + sb ✓"
 
-Bottom callout: "2s − 3 is NEVER achievable (best-possible proof by contradiction)"
+Bottom callout: "2s - 3 is NEVER achievable (best-possible proof by contradiction)"
 
 Footnote: "Figure 1-7 — Theorem 3: two cases give base cases; +3 induction closes the proof"
 """,
@@ -998,30 +998,30 @@ Layout: three sections.
 
 TOP SECTION — "Frobenius number formula":
   - A centred display box:
-      "g(r, s) = (r−1)(s−1) − 1   [for gcd(r,s) = 1]"
+      "g(r, s) = (r-1)(s-1) - 1   [for gcd(r,s) = 1]"
   - Two example rows:
-      "g(3, 5) = 2×4 − 1 = 7      ← last non-achievable amount"
-      "g(3, 7) = 2×6 − 1 = 11"
+      "g(3, 5) = 2×4 - 1 = 7      ← last non-achievable amount"
+      "g(3, 7) = 2×6 - 1 = 11"
   - A small vertical number line from 0 to 12 on the right side:
       Amounts 0,3,5,6,8,9,10,11,12 marked with green ticks.
       Amounts 1,2,4,7 marked with amber crosses.
       Arrow at n=7 labelled "g(3,5) = 7"
 
 MIDDLE SECTION — "Symmetry (Theorem C / Corollary 2)":
-  - Title: "Among {0, 1, …, (r−1)(s−1)−1}:"
+  - Title: "Among {0, 1, ..., (r-1)(s-1)-1}:"
   - Two side-by-side count boxes:
-      Left (green):  "½(r−1)(s−1)   achievable"
-      Right (amber): "½(r−1)(s−1)   NOT achievable"
-  - For (r,s) = (3,5): "(r−1)(s−1) = 8.  Half = 4 achievable, 4 not achievable."
+      Left (green):  "½(r-1)(s-1)   achievable"
+      Right (amber): "½(r-1)(s-1)   NOT achievable"
+  - For (r,s) = (3,5): "(r-1)(s-1) = 8.  Half = 4 achievable, 4 not achievable."
   - Annotation: "Perfect 50/50 split — a non-obvious structural fact"
 
 BOTTOM SECTION — "Connection to earlier theorems":
   - A small table:
       Theorem 2:  r=3, s=5  →  g=7,  threshold=8=g+1
-      Theorem 3:  r=3, s=s  →  g=2(s−1)−1, threshold=2(s−1)
-      Theorem A:  general   →  g=(r−1)(s−1)−1
+      Theorem 3:  r=3, s=s  →  g=2(s-1)-1, threshold=2(s-1)
+      Theorem A:  general   →  g=(r-1)(s-1)-1
 
-Footnote: "Figure 1-8 — Frobenius number g(r,s) = (r−1)(s−1)−1; Theorem C gives exact 50/50 split below threshold"
+Footnote: "Figure 1-8 — Frobenius number g(r,s) = (r-1)(s-1)-1; Theorem C gives exact 50/50 split below threshold"
 """,
 
     diagram_type    = "reference",
