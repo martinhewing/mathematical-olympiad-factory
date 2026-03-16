@@ -29,7 +29,7 @@ def security_env():
     os.environ["RATE_LIMIT_SESSIONS_PER_HOUR"] = "3"
     os.environ["RATE_LIMIT_SUBMITS_PER_HOUR"]  = "3"
 
-    from connectionsphere_factory.config import get_settings
+    from competitive_programming_factory.config import get_settings
     get_settings.cache_clear()
 
     yield
@@ -44,14 +44,14 @@ def security_env():
 
 @pytest.fixture(scope="module")
 def secure_app(security_env):
-    from connectionsphere_factory.app import create_app
+    from competitive_programming_factory.app import create_app
     return create_app()
 
 
 @pytest.fixture(autouse=True)
 def clear_state():
-    from connectionsphere_factory.middleware import rate_limit as rl_module
-    import connectionsphere_factory.session_store as store
+    from competitive_programming_factory.middleware import rate_limit as rl_module
+    import competitive_programming_factory.session_store as store
     rl_module._windows.clear()
     store._store.clear()
     yield
@@ -100,7 +100,7 @@ class TestAuthentication:
         key enumeration. hmac.compare_digest is constant-time.
         """
         import inspect
-        from connectionsphere_factory.middleware.auth import _verify_key
+        from competitive_programming_factory.middleware.auth import _verify_key
         assert "hmac.compare_digest" in inspect.getsource(_verify_key)
 
 
@@ -115,7 +115,7 @@ class TestRateLimiting:
     """
 
     def test_fourth_session_request_is_rejected(self, authed, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             for _ in range(3):
                 r = authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
                 assert r.status_code == 201
@@ -126,7 +126,7 @@ class TestRateLimiting:
         assert "retry_after_seconds" in r.json()
 
     def test_retry_after_header_present(self, authed, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             for _ in range(3):
                 authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
             r = authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
@@ -135,10 +135,10 @@ class TestRateLimiting:
 
     def test_separate_keys_have_independent_windows(self, secure_app, mock_scene):
         """Exhausting key A must not affect key B."""
-        from connectionsphere_factory.middleware import rate_limit as rl_module
+        from competitive_programming_factory.middleware import rate_limit as rl_module
         client_a = TestClient(secure_app, headers={"X-API-Key": _CORRECT_KEY})
 
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             for _ in range(3):
                 client_a.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
 
@@ -163,7 +163,7 @@ class TestInputValidation:
         assert r.status_code == 422
 
     def test_oversized_answer_rejected(self, authed, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 
@@ -174,7 +174,7 @@ class TestInputValidation:
         assert r.status_code == 422
 
     def test_stage_n_over_max_rejected(self, authed, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 
@@ -182,7 +182,7 @@ class TestInputValidation:
         assert r.status_code == 400
 
     def test_stage_n_zero_rejected(self, authed, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 

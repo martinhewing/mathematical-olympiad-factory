@@ -1,7 +1,7 @@
 [project]
-name            = "connectionsphere-factory"
+name            = "competitive-programming-factory"
 version         = "0.1.0"
-description     = "FAANG-level system design interview factory"
+description     = "Mathematical olympiad competitive programming tutor"
 requires-python = ">=3.12"
 
 dependencies = [

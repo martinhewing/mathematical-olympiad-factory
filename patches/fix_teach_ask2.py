@@ -1,11 +1,11 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 old = '''@router.post("/session/{session_id}/teach/ask")
 def teach_ask(session_id: str, answer: str = Form(...)):
     """Candidate asks Alex a question during TEACH phase."""
-    from connectionsphere_factory.engine.session_engine import render_and_call
-    from connectionsphere_factory.config import get_settings
+    from competitive_programming_factory.engine.session_engine import render_and_call
+    from competitive_programming_factory.config import get_settings
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
     spec = engine.get_or_generate_stage(session_id, 1)
@@ -48,8 +48,8 @@ Return ONLY JSON: {{"reply": "your response"}}"""
 new = '''@router.post("/session/{session_id}/teach/ask")
 async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     """Candidate asks Alex a question during TEACH phase via voice."""
-    from connectionsphere_factory.config import get_settings
-    from connectionsphere_factory.voice.stt import transcribe
+    from competitive_programming_factory.config import get_settings
+    from competitive_programming_factory.voice.stt import transcribe
     import anthropic, json
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")

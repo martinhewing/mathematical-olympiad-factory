@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 # Fix 1: In teach/complete, save Alex's spec before clearing

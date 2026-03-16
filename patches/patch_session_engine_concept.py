@@ -1,7 +1,7 @@
 """
 patch_session_engine_concept.py
 
-Run from the connectionsphere_factory repo root:
+Run from the competitive_programming_factory repo root:
     python3 patch_session_engine_concept.py
 
 Five surgical patches to session_engine.py for the per-concept architecture:
@@ -15,7 +15,7 @@ Five surgical patches to session_engine.py for the per-concept architecture:
 
 import pathlib, py_compile, sys, tempfile, os
 
-ENGINE = pathlib.Path("src/connectionsphere_factory/engine/session_engine.py")
+ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found — run from repo root")
 
@@ -36,16 +36,16 @@ def _fail(patch_n: str, anchors: list[str]) -> None:
 # =============================================================================
 
 P1_NEW = (
-    "from connectionsphere_factory.engine.teach_spec import build_teach_spec\n"
-    "from connectionsphere_factory.engine.teach_spec import (\n"
+    "from competitive_programming_factory.engine.teach_spec import build_teach_spec\n"
+    "from competitive_programming_factory.engine.teach_spec import (\n"
     "    build_single_concept_teach_spec,\n"
     "    build_single_concept_jordan_spec,\n"
     "    select_concepts_for_problem,\n"
     ")\n"
-    "from connectionsphere_factory.curriculum import CONCEPT_BY_ID"
+    "from competitive_programming_factory.curriculum import CONCEPT_BY_ID"
 )
 
-P1_OLD = "from connectionsphere_factory.engine.teach_spec import build_teach_spec"
+P1_OLD = "from competitive_programming_factory.engine.teach_spec import build_teach_spec"
 
 if "build_single_concept_teach_spec" in src:
     print("  SKIP  PATCH 1 — concept spec imports already present")
@@ -129,7 +129,7 @@ P3_OLD = (
     '        store.load_field(session_id, "problem_statement") or "", stage_n\n'
     '    )\n'
     '\n'
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}'
 )
 
@@ -150,7 +150,7 @@ P3_NEW = (
     '        store.load_field(session_id, "problem_statement") or "", stage_n\n'
     '    )\n'
     '\n'
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}'
 )
 
@@ -164,7 +164,7 @@ else:
     _fail("PATCH 3", [
         '    result = load_session(session_id)',
         '    label_id   = f"STAGE-{stage_n}"',
-        '    from connectionsphere_factory.domain.fsm.states import State as _State',
+        '    from competitive_programming_factory.domain.fsm.states import State as _State',
         '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}',
     ])
 
@@ -273,7 +273,7 @@ def _get_or_generate_concept_stage(
     Cache key: "concept_{stage_n}_{alex|jordan}" so Alex and Jordan
     specs for the same concept are cached independently.
     """
-    from connectionsphere_factory.domain.fsm.states import State as _State
+    from competitive_programming_factory.domain.fsm.states import State as _State
 
     phase_key = "alex" if fsm.state.is_teach_phase else "jordan"
     cache_key = f"concept_{stage_n}_{phase_key}"
@@ -360,7 +360,7 @@ def _process_concept_submission(
       PARTIAL   → probe (same stage_n).
       NOT_MET   → flag concept, advance_concept(), next stage.
     """
-    from connectionsphere_factory.domain.fsm.states import State
+    from competitive_programming_factory.domain.fsm.states import State
 
     settings    = get_settings()
     probe_limit = settings.probe_limit
@@ -606,7 +606,7 @@ def _advance_concept_and_route(
     Advance to the next concept and return the next_url.
     Shared by CONFIRMED and NOT_MET/FLAGGED paths.
     """
-    from connectionsphere_factory.domain.fsm.states import State
+    from competitive_programming_factory.domain.fsm.states import State
 
     fsm.advance_concept()
 
@@ -640,7 +640,7 @@ def _drive_concept_fsm(
     dll:                   FactoryConversationHistory,
 ) -> str | None:
     """Drive FSM transitions for Jordan\'s CONCEPT_STAGE verdicts."""
-    from connectionsphere_factory.domain.fsm.states import State
+    from competitive_programming_factory.domain.fsm.states import State
 
     if verdict == "CONFIRMED":
         if dll.current:

@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/engine/session_engine.py"
+path = "src/competitive_programming_factory/engine/session_engine.py"
 text = open(path).read()
 
 old = '''    store.save_field(session_id, "stage_specs",       {})

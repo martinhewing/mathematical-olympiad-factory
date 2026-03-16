@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/voice.py"
+path = "src/competitive_programming_factory/routes/voice.py"
 text = open(path).read()
 
 old = """    const res  = await fetch(`/session/${{SESSION_ID}}/speak`, {{

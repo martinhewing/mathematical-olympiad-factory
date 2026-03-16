@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/engine/prompt_renderer.py"
+path = "src/competitive_programming_factory/engine/prompt_renderer.py"
 text = open(path).read()
 
 # Fix 1: call_claude accepts images

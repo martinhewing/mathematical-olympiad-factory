@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 lines = open(path).readlines()
 
 for i, l in enumerate(lines):

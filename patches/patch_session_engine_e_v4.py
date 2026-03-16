@@ -1,7 +1,7 @@
 """
 patch_session_engine_e_v4.py
 
-Run from the connectionsphere_factory repo root:
+Run from the competitive_programming_factory repo root:
     python3 patch_session_engine_e_v4.py
 
 Four patches:
@@ -13,7 +13,7 @@ Four patches:
 
 import pathlib, py_compile, sys, tempfile, os
 
-ENGINE = pathlib.Path("src/connectionsphere_factory/engine/session_engine.py")
+ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found. Run from repo root.")
 
@@ -26,15 +26,15 @@ changes  = []
 # PATCH 1 — import diagram_evaluator
 # =============================================================================
 
-OLD_P1 = "from connectionsphere_factory.engine.prompt_renderer import render_and_call"
+OLD_P1 = "from competitive_programming_factory.engine.prompt_renderer import render_and_call"
 NEW_P1 = (
-    "from connectionsphere_factory.engine.prompt_renderer import render_and_call\n"
-    "from connectionsphere_factory.engine.diagram_evaluator import (\n"
+    "from competitive_programming_factory.engine.prompt_renderer import render_and_call\n"
+    "from competitive_programming_factory.engine.diagram_evaluator import (\n"
     "    evaluate_diagram, diagram_passes_minimum, diagram_summary,\n"
     ")"
 )
 
-if "from connectionsphere_factory.engine.diagram_evaluator import" in src:
+if "from competitive_programming_factory.engine.diagram_evaluator import" in src:
     print("  SKIP  PATCH 1 — already imported")
     changes.append("PATCH 1 — already applied")
 elif OLD_P1 in src:
@@ -102,7 +102,7 @@ NEW_P2 = (
     '    curriculum_concepts: list[dict] = []\n'
     '    if all_concept_ids:\n'
     '        try:\n'
-    '            from connectionsphere_factory.curriculum import CONCEPT_BY_ID\n'
+    '            from competitive_programming_factory.curriculum import CONCEPT_BY_ID\n'
     '            for cid in all_concept_ids:\n'
     '                c = CONCEPT_BY_ID.get(cid)\n'
     '                if c:\n'

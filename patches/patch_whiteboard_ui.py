@@ -69,7 +69,7 @@ import sys
 import tempfile
 import os
 
-VOICE = pathlib.Path("src/connectionsphere_factory/routes/voice.py")
+VOICE = pathlib.Path("src/competitive_programming_factory/routes/voice.py")
 
 if not VOICE.exists():
     sys.exit(f"ERROR: {VOICE} not found. Run from repo root.")

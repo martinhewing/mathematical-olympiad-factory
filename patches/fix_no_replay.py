@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/voice.py"
+path = "src/competitive_programming_factory/routes/voice.py"
 text = open(path).read()
 
 # Add a played-audio tracker after SESSION_ID declaration

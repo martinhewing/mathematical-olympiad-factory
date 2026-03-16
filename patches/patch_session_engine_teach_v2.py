@@ -1,7 +1,7 @@
 """
 patch_session_engine_teach_v2.py  — corrected to match your actual session_engine.py
 
-Run from the connectionsphere_factory repo root:
+Run from the competitive_programming_factory repo root:
     python3 patch_session_engine_teach_v2.py
 
 Applies 3 patches:
@@ -12,7 +12,7 @@ Applies 3 patches:
 
 import pathlib, py_compile, sys, tempfile, os
 
-ENGINE = pathlib.Path("src/connectionsphere_factory/engine/session_engine.py")
+ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found. Run from repo root.")
 
@@ -24,13 +24,13 @@ changes  = []
 # PATCH 1 — import build_teach_spec
 # =============================================================================
 
-OLD_P1 = "from connectionsphere_factory.engine.prompt_renderer import render_and_call"
+OLD_P1 = "from competitive_programming_factory.engine.prompt_renderer import render_and_call"
 NEW_P1 = (
-    "from connectionsphere_factory.engine.prompt_renderer import render_and_call\n"
-    "from connectionsphere_factory.engine.teach_spec import build_teach_spec"
+    "from competitive_programming_factory.engine.prompt_renderer import render_and_call\n"
+    "from competitive_programming_factory.engine.teach_spec import build_teach_spec"
 )
 
-if "from connectionsphere_factory.engine.teach_spec import build_teach_spec" in src:
+if "from competitive_programming_factory.engine.teach_spec import build_teach_spec" in src:
     print("  SKIP  PATCH 1 — build_teach_spec already imported")
     changes.append("PATCH 1 — already applied")
 elif OLD_P1 in src:
@@ -45,7 +45,7 @@ else:
 #
 # Actual code in your file (from grep output):
 #
-#     from connectionsphere_factory.domain.fsm.states import State as _State
+#     from competitive_programming_factory.domain.fsm.states import State as _State
 #     is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}
 #     template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"
 #     ctx = {
@@ -66,7 +66,7 @@ else:
 # =============================================================================
 
 OLD_P2 = (
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n'
     '    template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"\n'
     '    ctx = {\n'
@@ -87,7 +87,7 @@ OLD_P2 = (
 )
 
 NEW_P2 = (
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n'
     '\n'
     '    if is_teach:\n'

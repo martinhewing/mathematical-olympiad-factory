@@ -23,7 +23,7 @@ class TestCompleteSessionFlow:
     """
 
     def _create_session(self, client, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={
                 "problem_statement": "Design a notification system",
                 "candidate_name":    "Test Candidate",
@@ -44,7 +44,7 @@ class TestCompleteSessionFlow:
         data = self._create_session(client, mock_scene)
         sid  = data["session_id"]
 
-        with patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
+        with patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
             r = client.get(f"/session/{sid}/stage/1")
 
         assert r.status_code == 200
@@ -57,7 +57,7 @@ class TestCompleteSessionFlow:
         data = self._create_session(client, mock_scene)
         sid  = data["session_id"]
 
-        with patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
+        with patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
             r = client.get(f"/session/{sid}/stage/1")
 
         assert mock_scene["scene"][:40] in r.text
@@ -68,8 +68,8 @@ class TestCompleteSessionFlow:
         data = self._create_session(client, mock_scene)
         sid  = data["session_id"]
 
-        with patch("connectionsphere_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
+        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
+             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
             r = client.post(
                 f"/session/{sid}/stage/1/submit",
                 data={"answer": "I would clarify the scale first."},
@@ -86,8 +86,8 @@ class TestCompleteSessionFlow:
         data = self._create_session(client, mock_scene)
         sid  = data["session_id"]
 
-        with patch("connectionsphere_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_partial_assessment):
+        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
+             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_partial_assessment):
             r = client.post(
                 f"/session/{sid}/stage/1/submit",
                 data={"answer": "I would use a database."},
@@ -107,8 +107,8 @@ class TestCompleteSessionFlow:
 
         last_next_url = None
         for stage_n in range(1, 4):
-            with patch("connectionsphere_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-                 patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
+            with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
+                 patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
                 r = client.post(
                     f"/session/{sid}/stage/{stage_n}/submit",
                     data={"answer": "Good answer."},
@@ -124,8 +124,8 @@ class TestCompleteSessionFlow:
         sid  = data["session_id"]
 
         for stage_n in range(1, 4):
-            with patch("connectionsphere_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-                 patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
+            with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
+                 patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
                 client.post(
                     f"/session/{sid}/stage/{stage_n}/submit",
                     data={"answer": "Good answer."},
@@ -145,7 +145,7 @@ class TestVisualisationEndpoints:
     """
 
     def test_fsm_visualize_returns_renderable_content(self, client, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={"problem_statement": "Design a cache"})
         sid = r.json()["session_id"]
 
@@ -157,7 +157,7 @@ class TestVisualisationEndpoints:
         )
 
     def test_dll_visualize_returns_renderable_content(self, client, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={"problem_statement": "Design a cache"})
         sid = r.json()["session_id"]
 
@@ -165,7 +165,7 @@ class TestVisualisationEndpoints:
         assert r.status_code == 200
 
     def test_state_endpoint_returns_correct_fields(self, client, mock_scene):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={"problem_statement": "Design a cache"})
         sid = r.json()["session_id"]
 
@@ -184,13 +184,13 @@ class TestFlaggedFlow:
     """
 
     def test_flagged_page_renders_after_probe_limit(self, client, mock_scene, mock_stage_spec):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={"problem_statement": "Design a search engine"})
         sid = r.json()["session_id"]
 
-        import connectionsphere_factory.session_store as store
-        from connectionsphere_factory.domain.fsm.machine import PROBE_LIMIT
-        from connectionsphere_factory.domain.fsm.states import State
+        import competitive_programming_factory.session_store as store
+        from competitive_programming_factory.domain.fsm.machine import PROBE_LIMIT
+        from competitive_programming_factory.domain.fsm.states import State
 
         fsm, dll = store.load(sid)
         fsm.transition_to(State.SYSTEM_DESIGN, trigger="test")
@@ -200,7 +200,7 @@ class TestFlaggedFlow:
             fsm.increment_turn()
         store.save(sid, fsm, dll)
 
-        with patch("connectionsphere_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec):
+        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec):
             r = client.post(
                 f"/session/{sid}/stage/1/submit",
                 data={"answer": "I don't know."},

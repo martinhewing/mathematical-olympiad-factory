@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 # Insert before the submit endpoint
@@ -8,14 +8,14 @@ new = '''@router.post("/session/{session_id}/teach/complete")
 def teach_complete(session_id: str):
     """Advance FSM from TEACH to REQUIREMENTS — Alex hands over to Jordan."""
     import os
-    from connectionsphere_factory.domain.fsm.states import State
+    from competitive_programming_factory.domain.fsm.states import State
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
     result = engine.load_session(session_id)
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, dll = result
-    from connectionsphere_factory.domain.fsm.states import State as _State
+    from competitive_programming_factory.domain.fsm.states import State as _State
     if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:
         fsm.transition_to(_State.TEACH_CHECK,  trigger="comprehension_skipped")
         fsm.transition_to(_State.REQUIREMENTS, trigger="teach_complete")

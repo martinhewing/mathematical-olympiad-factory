@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 lines = open(path).readlines()
 
 # Find start and end of teach_ask function
@@ -17,8 +17,8 @@ else:
     print(f"Found teach_ask at lines {start+1}-{end}")
     new_func = '''async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     """Candidate asks Alex a question during TEACH phase via voice."""
-    from connectionsphere_factory.config import get_settings
-    from connectionsphere_factory.voice.stt import transcribe
+    from competitive_programming_factory.config import get_settings
+    from competitive_programming_factory.voice.stt import transcribe
     import anthropic, json
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")

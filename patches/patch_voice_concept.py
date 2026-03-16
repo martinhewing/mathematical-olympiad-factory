@@ -1,10 +1,10 @@
 """
 patch_voice_concept.py
 
-Run from the connectionsphere_factory repo root:
+Run from the competitive_programming_factory repo root:
     python3 patch_voice_concept.py
 
-Three patches to src/connectionsphere_factory/routes/voice.py:
+Three patches to src/competitive_programming_factory/routes/voice.py:
 
   PATCH 1  _stage_text(): recognise Concept Teach/Check/Stage states +
            shorten TTS to greeting only for concept sessions
@@ -17,7 +17,7 @@ Three patches to src/connectionsphere_factory/routes/voice.py:
 
 import pathlib, py_compile, sys, tempfile, os
 
-VOICE = pathlib.Path("src/connectionsphere_factory/routes/voice.py")
+VOICE = pathlib.Path("src/competitive_programming_factory/routes/voice.py")
 if not VOICE.exists():
     sys.exit(f"ERROR: {VOICE} not found — run from repo root")
 
@@ -158,7 +158,7 @@ P2_CSS = '''
 '''
 
 P2_ANCHOR = '/* ── Top bar ─────────────────────────────────────────────────── */'
-P2_ANCHOR_ALT = '/* ── Tsrc/connectionsphere_factory/routes/voice.py'
+P2_ANCHOR_ALT = '/* ── Tsrc/competitive_programming_factory/routes/voice.py'
 
 if '.concept-pill' in src:
     print("  SKIP  PATCH 2 — progress pill CSS already present")

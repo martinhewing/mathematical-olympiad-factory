@@ -1,7 +1,7 @@
 import re
 
 # Fix 1: audio_path in tts.py
-tts_path = "src/connectionsphere_factory/voice/tts.py"
+tts_path = "src/competitive_programming_factory/voice/tts.py"
 tts = open(tts_path).read()
 
 old1 = '''def audio_path(session_id: str, stage_n: int) -> str:
@@ -19,7 +19,7 @@ else:
     print("✗ tts.py pattern not found")
 
 # Fix 2: voice.py - pass phase to audio_path
-voice_path = "src/connectionsphere_factory/routes/voice.py"
+voice_path = "src/competitive_programming_factory/routes/voice.py"
 text = open(voice_path).read()
 
 # get_stage_audio_file endpoint - needs to know phase from FSM
@@ -30,7 +30,7 @@ old2 = '''    savepath = audio_path(session_id, stage_n)
     return Response(
         content    = Path(savepath).read_bytes(),'''
 
-new2 = '''    import connectionsphere_factory.session_store as _store
+new2 = '''    import competitive_programming_factory.session_store as _store
     _fsm_result = engine.load_session(session_id)
     _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in {"Teach", "Teach Comprehension Check"}) else "interview"
     savepath = audio_path(session_id, stage_n, _phase)

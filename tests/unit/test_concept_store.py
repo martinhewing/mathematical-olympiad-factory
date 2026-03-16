@@ -19,8 +19,8 @@ Testing:
 
 import pytest
 
-import connectionsphere_factory.session_store as store
-from connectionsphere_factory.engine.concept_store import (
+import competitive_programming_factory.session_store as store
+from competitive_programming_factory.engine.concept_store import (
     CONFIDENCE_THRESHOLD,
     REQUIRED_CONCEPTS,
     accumulate,

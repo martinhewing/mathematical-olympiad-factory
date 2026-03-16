@@ -1,5 +1,5 @@
-path_s = "src/connectionsphere_factory/routes/stages.py"
-path_v = "src/connectionsphere_factory/routes/voice.py"
+path_s = "src/competitive_programming_factory/routes/stages.py"
+path_v = "src/competitive_programming_factory/routes/voice.py"
 
 import py_compile
 
@@ -8,8 +8,8 @@ text = open(path_s).read()
 
 old = '''async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     """Candidate asks Alex a question during TEACH phase via voice."""
-    from connectionsphere_factory.config import get_settings
-    from connectionsphere_factory.voice.stt import transcribe
+    from competitive_programming_factory.config import get_settings
+    from competitive_programming_factory.voice.stt import transcribe
     import anthropic, json, re
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
@@ -43,8 +43,8 @@ new = '''async def teach_ask(
     images: list[UploadFile] = File(default=[]),
 ):
     """Candidate asks Alex a question during TEACH phase via voice + optional diagrams."""
-    from connectionsphere_factory.config import get_settings
-    from connectionsphere_factory.voice.stt import transcribe
+    from competitive_programming_factory.config import get_settings
+    from competitive_programming_factory.voice.stt import transcribe
     import anthropic, json, re, base64
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")

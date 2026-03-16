@@ -26,7 +26,7 @@ import shutil
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 ROOT     = pathlib.Path(".")
-SRC      = ROOT / "src" / "connectionsphere_factory"
+SRC      = ROOT / "src" / "competitive_programming_factory"
 ENGINE   = SRC / "engine" / "session_engine.py"
 TEMPLATE = SRC / "templates" / "assess_submission.j2"
 CONCEPT_STORE_DEST = SRC / "engine" / "concept_store.py"
@@ -74,7 +74,7 @@ print("1. Installing engine/concept_store.py")
 print("═" * 60)
 
 # Look in patches/src/... first, then patches/ directly
-CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "src" / "connectionsphere_factory" / "engine" / "concept_store.py"
+CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "src" / "competitive_programming_factory" / "engine" / "concept_store.py"
 if not CONCEPT_STORE_SRC.exists():
     CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "concept_store.py"
 
@@ -111,10 +111,10 @@ engine_src = ENGINE.read_text()
 
 # ── 2a. Add import ────────────────────────────────────────────────────────────
 
-OLD_IMPORT = "import connectionsphere_factory.session_store as store"
+OLD_IMPORT = "import competitive_programming_factory.session_store as store"
 NEW_IMPORT = """\
-import connectionsphere_factory.session_store as store
-from connectionsphere_factory.engine.concept_store import (
+import competitive_programming_factory.session_store as store
+from competitive_programming_factory.engine.concept_store import (
     accumulate as accumulate_concepts,
     evaluate as evaluate_concepts,
     get_accumulated as get_accumulated_concepts,
@@ -251,7 +251,7 @@ def _concepts_for_stage(problem_statement: str, stage_n: int) -> list[str]:
 NEW_CONCEPTS_FN = """\
 def _concepts_for_stage(problem_statement: str, stage_n: int) -> list[str]:
     \"\"\"Return required concepts for a stage. Canonical source: concept_store.\"\"\"
-    from connectionsphere_factory.engine.concept_store import get_required
+    from competitive_programming_factory.engine.concept_store import get_required
     return sorted(get_required(stage_n))"""
 
 if OLD_CONCEPTS_FN in engine_src:

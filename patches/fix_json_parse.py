@@ -1,6 +1,6 @@
 import re
 
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 old = '''    raw = msg.content[0].text.strip()

@@ -1,10 +1,10 @@
 """
 patch_stages_concept.py
 
-Run from the connectionsphere_factory repo root:
+Run from the competitive_programming_factory repo root:
     python3 patch_stages_concept.py
 
-Two patches to src/connectionsphere_factory/routes/stages.py:
+Two patches to src/competitive_programming_factory/routes/stages.py:
 
   PATCH 1  GET /session/{id}/stage/{n}
            Add concept fields to response: agent, concept_id, scene_hook,
@@ -19,7 +19,7 @@ Two patches to src/connectionsphere_factory/routes/stages.py:
 
 import pathlib, py_compile, sys, tempfile, os
 
-STAGES = pathlib.Path("src/connectionsphere_factory/routes/stages.py")
+STAGES = pathlib.Path("src/competitive_programming_factory/routes/stages.py")
 if not STAGES.exists():
     sys.exit(f"ERROR: {STAGES} not found — run from repo root")
 
@@ -163,12 +163,12 @@ else:
 # =============================================================================
 
 P3_OLD = (
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:'
 )
 
 P3_NEW = (
-    '    from connectionsphere_factory.domain.fsm.states import State as _State\n'
+    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
     '    if fsm.state in {\n'
     '        _State.TEACH, _State.TEACH_CHECK,\n'
     '        _State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK, _State.CONCEPT_STAGE,\n'
@@ -183,7 +183,7 @@ elif P3_OLD in src:
     changes.append("PATCH 3 — teach/restart: handles CONCEPT_TEACH/CHECK/STAGE states")
 else:
     _fail("PATCH 3", [
-        '    from connectionsphere_factory.domain.fsm.states import State as _State',
+        '    from competitive_programming_factory.domain.fsm.states import State as _State',
         '    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:',
     ])
 

@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/voice.py"
+path = "src/competitive_programming_factory/routes/voice.py"
 lines = open(path).readlines()
 
 # Find the line with generate_tts inside speak_text (no voice_id arg)

@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/voice.py"
+path = "src/competitive_programming_factory/routes/voice.py"
 lines = open(path).readlines()
 
 # Find key line numbers

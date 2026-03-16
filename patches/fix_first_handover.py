@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 old = '''        # Clear stage_specs so Jordan's spec is generated fresh

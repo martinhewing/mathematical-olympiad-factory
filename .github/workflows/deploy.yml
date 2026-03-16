@@ -59,13 +59,13 @@ jobs:
             uv sync --frozen --no-dev
 
             echo "── Restarting service ──"
-            sudo systemctl restart factory
+            sudo systemctl restart cp-factory
 
             echo "── Waiting for startup ──"
             sleep 3
 
             echo "── Health check ──"
-            curl --fail --silent http://localhost:8391/health | python3 -c "
+            curl --fail --silent http://localhost:8395/health | python3 -c "
             import sys, json
             body = json.load(sys.stdin)
             assert body['status'] == 'ok', f'Health check failed: {body}'

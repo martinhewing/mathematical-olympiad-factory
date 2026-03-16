@@ -12,8 +12,8 @@ Testing:
 
 import pytest
 
-from connectionsphere_factory.domain.fsm.machine import PROBE_LIMIT, FSMTransitionError
-from connectionsphere_factory.domain.fsm.states import State
+from competitive_programming_factory.domain.fsm.machine import PROBE_LIMIT, FSMTransitionError
+from competitive_programming_factory.domain.fsm.states import State
 
 
 @pytest.mark.unit

@@ -1,5 +1,5 @@
 import pathlib
-p = pathlib.Path("src/connectionsphere_factory/routes/stages.py")
+p = pathlib.Path("src/competitive_programming_factory/routes/stages.py")
 src = p.read_text()
 
 OLD = ('    if fsm.state in {\n'

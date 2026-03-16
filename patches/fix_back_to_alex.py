@@ -1,4 +1,4 @@
-path = "src/connectionsphere_factory/routes/stages.py"
+path = "src/competitive_programming_factory/routes/stages.py"
 text = open(path).read()
 
 old = '@router.post("/session/{session_id}/teach/complete")'
@@ -12,7 +12,7 @@ def teach_restart(session_id: str):
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, dll = result
-    from connectionsphere_factory.domain.fsm.states import State as _State
+    from competitive_programming_factory.domain.fsm.states import State as _State
     fsm.transition_to(_State.TEACH, trigger="back_to_teach")
     # Reset dll to teach stage
     dll = engine.FactoryConversationHistory()

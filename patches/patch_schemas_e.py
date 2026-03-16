@@ -14,7 +14,7 @@ This patch makes Pydantic validate and serialise them correctly.
 
 import pathlib, py_compile, sys, tempfile, os
 
-SCHEMAS = pathlib.Path("src/connectionsphere_factory/models/schemas.py")
+SCHEMAS = pathlib.Path("src/competitive_programming_factory/models/schemas.py")
 
 if not SCHEMAS.exists():
     sys.exit(f"ERROR: {SCHEMAS} not found. Run from repo root.")

@@ -10,10 +10,10 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-import connectionsphere_factory.session_store as store
-from connectionsphere_factory.domain.conversation.history import FactoryConversationHistory
-from connectionsphere_factory.domain.fsm.machine import FactoryFSM
-from connectionsphere_factory.domain.fsm.states import State
+import competitive_programming_factory.session_store as store
+from competitive_programming_factory.domain.conversation.history import FactoryConversationHistory
+from competitive_programming_factory.domain.fsm.machine import FactoryFSM
+from competitive_programming_factory.domain.fsm.states import State
 
 _TEST_API_KEY = "test-key-do-not-use-in-production"
 
@@ -28,10 +28,10 @@ def set_test_env():
 
 @pytest.fixture(scope="session")
 def app(set_test_env):
-    from connectionsphere_factory.config import get_settings
+    from competitive_programming_factory.config import get_settings
     get_settings.cache_clear()
 
-    from connectionsphere_factory.app import create_app
+    from competitive_programming_factory.app import create_app
     return create_app()
 
 
@@ -156,7 +156,7 @@ def clear_rate_limit_windows():
     Rate limiter uses module-level state that persists across tests.
     Clear it between tests or the 20-sessions/hour limit fires mid-suite.
     """
-    from connectionsphere_factory.middleware import rate_limit
+    from competitive_programming_factory.middleware import rate_limit
     rate_limit._windows.clear()
     yield
     rate_limit._windows.clear()

@@ -59,7 +59,7 @@ class TestSessionLifecycleIsReachable:
     """
 
     def test_create_session_and_reach_stage_one(self, client, mock_scene, mock_stage_spec):
-        with patch("connectionsphere_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
             r = client.post("/sessions", json={
                 "problem_statement": "Design a rate limiter",
             })
@@ -67,7 +67,7 @@ class TestSessionLifecycleIsReachable:
         assert r.status_code == 201
         sid = r.json()["session_id"]
 
-        with patch("connectionsphere_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
+        with patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_stage_spec):
             r = client.get(f"/session/{sid}/stage/1")
 
         assert r.status_code == 200
