@@ -296,6 +296,19 @@ def _interview_html(session_id, problem, name, scene, fsm_state, phase,
       {{left: '$', right: '$', display: false}}
     ]
   }});"></script>
+<script>
+function renderMath() {{
+  if (typeof renderMathInElement !== 'undefined') {{
+    renderMathInElement(document.body, {{
+      delimiters: [
+        {{left: '$$', right: '$$', display: true}},
+        {{left: '$', right: '$', display: false}}
+      ],
+      throwOnError: false
+    }});
+  }}
+}}
+</script>
 <style>
 :root {{
   --bg:        #0a0a0a;
@@ -1214,6 +1227,7 @@ async function loadStage(n) {{
     // Show question + scene based on phase
     const isTeach = (stageData.phase === 'teach');
     qt.innerHTML  = isTeach ? (stageData.comprehension_check || '') : (stageData.opening_question || '');
+    renderMath();
 
     // ── Whiteboard: activate for Alistair drawing comprehension check ─────────
     deactivateWhiteboard();  // always reset first on stage load
@@ -1243,8 +1257,10 @@ async function loadStage(n) {{
         ? '<ul style="margin-top:12px;padding-left:16px;">' + concepts.map(c => '<li style="margin-bottom:8px;">' + (c.name || c) + ': ' + (c.explanation || '') + '</li>').join('') + '</ul>'
         : '';
       sceneEl.innerHTML = '<strong>' + stageData.greeting + '</strong>' + conceptHtml;
+      renderMath();
     }} else {{
-      sceneEl.textContent = stageData.scene || '';
+      sceneEl.innerHTML = stageData.scene || '';
+      renderMath();
     }}
     if (stageData.agent_name) {{ document.getElementById('agent-name-label').textContent = stageData.agent_name; document.getElementById('agent-role-label').textContent = stageData.agent_role || ''; }}
     qt.className  = 'question-text visible';
