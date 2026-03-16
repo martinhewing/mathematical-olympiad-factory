@@ -1,7 +1,7 @@
 """
 competitive_programming_factory/engine/teach_spec.py
 
-Curriculum-backed teach spec builder for Alex's lesson phase.
+Curriculum-backed teach spec builder for Alistair's lesson phase.
 
 Public API
 ──────────
@@ -55,60 +55,26 @@ log = get_logger(__name__)
 # Concept selection
 # ─────────────────────────────────────────────────────────────────────────────
 
-#: Always included — the Chapter 1 core eight.
-_CORE_IDS: frozenset[str] = frozenset({
-    "single_server",
-    "database_separation",
-    "scaling_models",
-    "load_balancer",
-    "database_replication",
-    "cache_tier",
-    "cdn",
-    "stateless_web_tier",
+#: All 8 Holton Chapter 1 concepts — always taught in full, in order.
+_ALL_CP_IDS: frozenset[str] = frozenset({
+    "problem_solving_framework",
+    "jug_problem",
+    "bezout_identity",
+    "consecutive_numbers",
+    "stamp_problem_discovery",
+    "threshold_proof_3_5",
+    "generalisation_3_s",
+    "frobenius_theorem",
 })
-
-#: Signal words → additional concepts
-_GLOBAL_SIGNALS = [
-    "global", "multi-region", "worldwide", "international",
-    "multiple data center", "geo", "latency",
-]
-_ASYNC_SIGNALS = [
-    "upload", "video", "photo", "image processing", "email",
-    "notification", "queue", "worker", "job", "async",
-    "background", "news feed", "timeline",
-]
-_SCALE_SIGNALS = [
-    "billion", "petabyte", "terabyte", "massive scale",
-    "sharding", "hundreds of million", "high write",
-]
 
 
 def select_concepts_for_problem(problem_statement: str) -> list[Concept]:
     """
-    Map a problem statement to the relevant CHAPTER_1_CONCEPTS subset.
-
-    Strategy:
-      - Always include concepts 1-8 (the core Chapter 1 progression)
-      - Add concept 9  (data_centers)      for "global" / "multi-region" problems
-      - Add concept 10 (message_queue)     for async work / upload / notification problems
-      - Add concept 11 (database_sharding) for "billions of users" / "petabyte" problems
-      - Always append concept 12 (full_architecture) as the capstone
-
-    Returns concepts in curriculum order (sorted by .order). Never shuffled.
+    For the CP instance, all 8 Holton Chapter 1 concepts are always included.
+    The curriculum is a linear progression — no problem-specific filtering.
+    Returns concepts in curriculum order. Never shuffled.
     """
-    p = problem_statement.lower()
-
-    selected_ids: set[str] = set(_CORE_IDS)
-    selected_ids.add("full_architecture")   # always the capstone
-
-    if any(s in p for s in _GLOBAL_SIGNALS):
-        selected_ids.add("data_centers")
-    if any(s in p for s in _ASYNC_SIGNALS):
-        selected_ids.add("message_queue")
-    if any(s in p for s in _SCALE_SIGNALS):
-        selected_ids.add("database_sharding")
-
-    concepts = [c for c in CHAPTER_1_CONCEPTS if c.id in selected_ids]
+    concepts = [c for c in CHAPTER_1_CONCEPTS if c.id in _ALL_CP_IDS]
     log.info(
         "teach_spec.concepts_selected",
         count       = len(concepts),
