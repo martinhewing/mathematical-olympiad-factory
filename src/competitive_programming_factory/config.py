@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # ── Cartesia ──────────────────────────────────────────────────────────
     cartesia_api_key:  str = ""
     cartesia_voice_id:  str = "e5d4c33a-d8f6-46e8-a10f-b5afecc35648"  # Imogen — Evie
-cartesia_tutor_voice_id: str = "ee7ea9f8-c0c1-498c-9279-764d6b56d189"  # Alistair — Oliver
+    cartesia_tutor_voice_id: str = "ee7ea9f8-c0c1-498c-9279-764d6b56d189"  # Alistair — Oliver
     cartesia_model:    str = "sonic-3"
     cartesia_stt_model: str = "ink-whisper"
     audio_storage_dir: str = "/tmp/connectionsphere_audio"
