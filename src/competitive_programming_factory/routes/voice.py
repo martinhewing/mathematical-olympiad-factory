@@ -18,6 +18,43 @@ router = APIRouter(tags=["voice"])
 log    = get_logger(__name__)
 
 
+def _strip_latex(text: str) -> str:
+    """
+    Convert LaTeX notation to natural spoken English for TTS.
+    Removes delimiters and replaces commands with readable equivalents.
+    """
+    import re
+    # Remove display math $$...$$ and inline math $...$
+    text = re.sub(r'\$\$(.+?)\$\$', lambda m: _latex_to_speech(m.group(1)), text, flags=re.DOTALL)
+    text = re.sub(r'\$(.+?)\$',     lambda m: _latex_to_speech(m.group(1)), text)
+    return text
+
+def _latex_to_speech(expr: str) -> str:
+    """Convert a LaTeX expression to speakable English."""
+    import re
+    e = expr.strip()
+    e = e.replace('\\geq', 'greater than or equal to')
+    e = e.replace('\\leq', 'less than or equal to')
+    e = e.replace('\\neq', 'not equal to')
+    e = e.replace('\\gcd', 'gcd')
+    e = e.replace('\\times', 'times')
+    e = e.replace('\\cdot', 'times')
+    e = e.replace('\\in', 'in')
+    e = e.replace('\\mathbb{Z}', 'the integers')
+    e = e.replace('\\mathbb{N}', 'the natural numbers')
+    e = e.replace('\\forall', 'for all')
+    e = e.replace('\\exists', 'there exists')
+    e = e.replace('\\infty', 'infinity')
+    e = e.replace('\\to', 'to')
+    e = e.replace('\\rightarrow', 'implies')
+    e = e.replace('\\Rightarrow', 'implies')
+    e = e.replace('\\ldots', '...')
+    e = e.replace('\\', '')
+    e = re.sub(r'\^{?(\w+)}?', r' to the power \1', e)
+    e = re.sub(r'_{?(\w+)}?', r' subscript \1', e)
+    return e.strip()
+
+
 def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
     from competitive_programming_factory.domain.agents import get_agent_for_state
     from competitive_programming_factory.config import get_settings as _settings
@@ -53,7 +90,7 @@ def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
         scene      = scene_data.get("scene", "")
         question   = spec.get("opening_question", "")
         parts      = [p for p in [scene, question] if p]
-    return ("  ".join(parts), voice_id)
+    return (_strip_latex("  ".join(parts)), voice_id)
 
 
 @router.get("/session/{session_id}/stage/{stage_n}/audio/file")
@@ -165,7 +202,7 @@ async def speak_text(session_id: str, payload: dict):
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
 
-    speak_text = payload.get("text", "").strip()
+    speak_text = _strip_latex(payload.get("text", "").strip())
     if not speak_text:
         raise HTTPException(status_code=422, detail="No text provided")
 
@@ -263,7 +300,7 @@ async def interview_page(session_id: str):
 
     return HTMLResponse(content=_interview_html(
         session_id = session_id,
-        problem    = problem,
+        problem    = _latexify(problem),
         name       = name,
         scene      = scene.get("scene", ""),
         fsm_state  = state["fsm_state"],
@@ -271,6 +308,28 @@ async def interview_page(session_id: str):
         agent_name = agent_name,
         agent_role = agent_role,
     ))
+
+
+def _latexify(text: str) -> str:
+    """
+    Convert plain-text mathematical notation to LaTeX delimited expressions
+    for KaTeX rendering. Handles common patterns in olympiad problem statements.
+    If the text already contains $ delimiters, return as-is.
+    """
+    import re
+    if '$' in text:
+        return text
+    # Replace standalone math expressions with $...$
+    # Pattern: sequences containing digits, variables, operators, comparisons
+    result = text
+    # Comparisons: n >= 8, a <= b, x != y
+    result = re.sub(r'([a-zA-Z0-9_]+)\s*>=\s*([a-zA-Z0-9_]+)', r'$\1 \\geq \2$', result)
+    result = re.sub(r'([a-zA-Z0-9_]+)\s*<=\s*([a-zA-Z0-9_]+)', r'$\1 \\leq \2$', result)
+    result = re.sub(r'([a-zA-Z0-9_]+)\s*!=\s*([a-zA-Z0-9_]+)', r'$\1 \\neq \2$', result)
+    # Expressions like 3a + 5b, ar + bs
+    result = re.sub(r'(\d+)([a-zA-Z])\s*\+\s*(\d+)([a-zA-Z])', r'$\1\2 + \3\4$', result)
+    result = re.sub(r'(\d+)([a-zA-Z])\s*-\s*(\d+)([a-zA-Z])', r'$\1\2 - \3\4$', result)
+    return result
 
 
 def _interview_html(session_id, problem, name, scene, fsm_state, phase,
@@ -297,6 +356,10 @@ def _interview_html(session_id, problem, name, scene, fsm_state, phase,
     ]
   }});"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {{
+  renderMath();
+}});
+
 function renderMath() {{
   if (typeof renderMathInElement !== 'undefined') {{
     renderMathInElement(document.body, {{
