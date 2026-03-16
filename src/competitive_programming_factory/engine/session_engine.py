@@ -154,7 +154,7 @@ def get_or_generate_stage(session_id: str, stage_n: int) -> dict[str, Any]:
             "label_name":           label_name,
             "concepts":             concepts,
         }
-        spec = render_and_call(template, ctx)
+        spec = render_and_call("generate_stage.j2", ctx)
 
     specs[str(stage_n)] = spec
     store.save_field(session_id, "stage_specs", specs)
