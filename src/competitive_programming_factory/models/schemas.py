@@ -21,10 +21,10 @@ class CandidateLevel(str, Enum):
 
 class CreateSessionRequest(BaseModel):
     problem_statement: str = Field(
-        ...,
+        default    = "First Step to Mathematical Olympiad Problems — Chapter 1",
         min_length = 10,
         max_length = 500,
-        examples   = ["Design a hotel reservation system"],
+        examples   = ["First Step to Mathematical Olympiad Problems — Chapter 1"],
     )
     candidate_name:  str           = Field(default="Candidate", max_length=100)
     candidate_level: CandidateLevel = CandidateLevel.SENIOR
