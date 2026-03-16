@@ -1078,7 +1078,7 @@ html, body {{
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="stage-indicator" id="stage-indicator">Stage —</span>
       <div class="progress-bar" id="progress-bar"></div>
-        <button id="back-to-alex-btn" onclick="backToAlex()" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:3px 10px;border-radius:3px;cursor:pointer;">← Alex</button>
+        <button id="back-to-alex-btn" onclick="backToAlex()" style="display:none;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;padding:3px 10px;border-radius:3px;cursor:pointer;">← Alistair</button>
       </div>
     </div>
 
@@ -1205,18 +1205,27 @@ async function loadStage(n) {{
     const isTeach = (stageData.phase === 'teach');
     qt.innerHTML  = isTeach ? (stageData.comprehension_check || '') : (stageData.opening_question || '');
 
-    // ── Whiteboard: activate for Alex drawing comprehension check ─────────
+    // ── Whiteboard: activate for Alistair drawing comprehension check ─────────
     deactivateWhiteboard();  // always reset first on stage load
     if (isTeach && stageData.comprehension_check_mode === 'drawing') {{
       activateWhiteboard({{
         by:        'alex',
         required:  true,
-        prompt:    'Sketch this before we move on',
+        prompt:    'Outline your proof or sketch before we move on',
+        conceptId: stageData.concept_id || null,
+        rubric:    stageData.drawing_rubric || [],
+      }});
+    }} else {{
+      // CP instance: written work always welcome at every stage
+      activateWhiteboard({{
+        by:        'alistair',
+        required:  false,
+        prompt:    'Upload written work, a proof sketch, or a diagram — optional',
         conceptId: stageData.concept_id || null,
         rubric:    stageData.drawing_rubric || [],
       }});
     }}
-    // Swap scene text: Alex's lesson during teach, Jordan's scenario during interview
+    // Swap scene text: Alistair's lesson during teach, Jordan's scenario during interview
     const sceneEl = document.getElementById('scene-text');
     if (isTeach && stageData.greeting) {{
       const concepts = stageData.concepts || [];
@@ -1540,24 +1549,24 @@ function renderAssessment(a) {{
     html += `<div class="probe-text">${{a.probe}}</div>`;
   }}
 
-  // ── Diagram request: Jordan is asking the candidate to draw ───────────
+  // ── Proof/diagram request: Imogen is asking the candidate to write ──
   if (a.diagram_request && a.diagram_request.required) {{
     const dr = a.diagram_request;
     activateWhiteboard({{
-      by:        'jordan',
+      by:        'imogen',
       required:  true,
-      prompt:    dr.prompt || 'Draw the architecture — upload your diagram',
+      prompt:    dr.prompt || 'Write out your proof — upload before submitting',
       conceptId: dr.concept_id || null,
       rubric:    dr.rubric   || [],
     }});
-  }} else if (a.diagram_request && !a.diagram_request.required) {{
-    // Suggested but not mandatory
+  }} else {{
+    // CP instance: written work always welcome at every examination stage
     activateWhiteboard({{
-      by:        'jordan',
+      by:        'imogen',
       required:  false,
-      prompt:    a.diagram_request.prompt || 'Diagrams welcome — upload if you have one',
-      conceptId: a.diagram_request.concept_id || null,
-      rubric:    a.diagram_request.rubric    || [],
+      prompt:    a.diagram_request ? (a.diagram_request.prompt || 'Written work welcome — upload if you have it') : 'Upload written work or a proof sketch — optional',
+      conceptId: a.diagram_request ? (a.diagram_request.concept_id || null) : null,
+      rubric:    a.diagram_request ? (a.diagram_request.rubric    || []) : [],
     }});
   }}
 
@@ -1598,7 +1607,7 @@ function renderAssessment(a) {{
     html += `<button class="next-btn" onclick="resetForProbe()">Try again →</button>`;
   }}
 
-  // During TEACH phase, show as Alex chat reply not Jordan verdict
+  // During TEACH phase, show as Alistair chat reply not Jordan verdict
   if (stageData && stageData.phase === 'teach') {{
     const alexReply = a.probe || a.feedback || '';
     panel.innerHTML = `<div style="font-size:13px;color:#bbb;line-height:1.7;border-left:2px solid var(--accent);padding-left:12px;">${{alexReply}}</div>
@@ -1641,7 +1650,7 @@ async function backToAlex() {{
     await fetch(`/session/${{SESSION_ID}}/teach/restart`, {{method:'POST'}});
   }} catch(e) {{}}
   btn.disabled = false;
-  btn.textContent = '← Alex';
+  btn.textContent = '← Alistair';
   // Re-enable the handover button
   const readyBtn = document.getElementById('ready-btn');
   if (readyBtn) {{ readyBtn.disabled = false; readyBtn.textContent = 'Test me →'; }}
