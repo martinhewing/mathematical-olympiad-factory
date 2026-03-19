@@ -1720,6 +1720,7 @@ async function handoverToJordan() {{
   const btn = document.getElementById('ready-btn');
   btn.disabled = true;
   btn.textContent = 'Handing over…';
+  btn.style.opacity = '0.7';
   try {{
     const audio = document.getElementById('stage-audio');
     try {{ audio.pause(); audio.src = ''; }} catch(e) {{}}
@@ -1732,18 +1733,25 @@ async function handoverToJordan() {{
 async function backToAlex() {{
   const btn = document.getElementById('back-to-alex-btn');
   btn.disabled = true;
-  btn.textContent = '…';
+  btn.textContent = '← Handing back…';
+  btn.style.opacity = '0.7';
   try {{
     const audio = document.getElementById('stage-audio');
     try {{ audio.pause(); audio.src = ''; }} catch(e) {{}}
     await fetch(`/session/${{SESSION_ID}}/teach/restart`, {{method:'POST'}});
-  }} catch(e) {{}}
-  btn.disabled = false;
-  btn.textContent = '← Alistair';
-  // Re-enable the handover button
+  }} catch(e) {{
+    btn.disabled = false;
+    btn.textContent = '← Alistair';
+    btn.style.opacity = '';
+    return;
+  }}
+  btn.textContent = '← Loading…';
   const readyBtn = document.getElementById('ready-btn');
   if (readyBtn) {{ readyBtn.disabled = false; readyBtn.textContent = 'Test me →'; }}
-  loadStage(1);
+  await loadStage(1);
+  btn.disabled = false;
+  btn.textContent = '← Alistair';
+  btn.style.opacity = '';
 }}
 
 function advanceStage(n) {{
