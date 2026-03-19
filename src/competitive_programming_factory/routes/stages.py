@@ -288,6 +288,15 @@ def submit_stage(
     """
     if len(answer.strip()) < 10:
         raise HTTPException(status_code=422, detail="Answer is too short (minimum 10 characters)")
+    if len(answer.strip()) > 4000:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Sorry, we can't process an answer that long. "
+                "Please keep your response to around 700 words — "
+                "that's roughly 4–5 minutes of speaking at a normal pace."
+            ),
+        )
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
 

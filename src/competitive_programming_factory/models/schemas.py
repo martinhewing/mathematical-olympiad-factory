@@ -32,7 +32,7 @@ class CreateSessionRequest(BaseModel):
 
 class SubmitStageRequest(BaseModel):
     field_id: str = Field(..., max_length=64)
-    answer:   str = Field(..., min_length=10, max_length=4000)
+    answer:   str = Field(..., min_length=10, max_length=8000)
     stage_n:  int = Field(..., ge=1, le=20)
 
 
