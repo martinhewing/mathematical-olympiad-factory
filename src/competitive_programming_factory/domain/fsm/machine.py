@@ -34,7 +34,7 @@ class FSMTransitionError(Exception):
         )
 
 
-PROBE_LIMIT = 3
+PROBE_LIMIT = 10
 
 
 class FactoryFSM:

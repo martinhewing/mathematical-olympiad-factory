@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     rate_limit_submits_per_hour:  int = 100
 
     # ── Session behaviour ─────────────────────────────────────────────────
-    probe_limit: int = 3
+    probe_limit: int = 10
     max_stage_n: int = 20
 
     @model_validator(mode="after")
