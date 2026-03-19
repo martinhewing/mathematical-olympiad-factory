@@ -98,7 +98,7 @@ curl https://api.anthropic.com/v1/messages \
   -H "x-api-key: $(grep ANTHROPIC_API_KEY /app/.env | cut -d= -f2)" \
   -H "anthropic-version: 2023-06-01" \
   -H "content-type: application/json" \
-  -d '{"model":"claude-haiku-4-5-20251001","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
+  -d '{"model":"claude-sonnet-4-20250514","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
 ```
 
 **If the key is invalid:** Rotate in the Anthropic dashboard → update `/app/.env` → `sudo systemctl restart factory`

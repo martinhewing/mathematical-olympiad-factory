@@ -32,7 +32,7 @@ old = '''async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     cfg    = get_settings()
     client = anthropic.Anthropic(api_key=cfg.anthropic_api_key)
     msg    = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-20250514",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )'''
@@ -80,7 +80,7 @@ new = '''async def teach_ask(
     cfg    = get_settings()
     client = anthropic.Anthropic(api_key=cfg.anthropic_api_key)
     msg    = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-20250514",
         max_tokens=300,
         messages=[{"role": "user", "content": user_content}],
     )'''
