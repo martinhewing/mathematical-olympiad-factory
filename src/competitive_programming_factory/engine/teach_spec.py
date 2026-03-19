@@ -304,7 +304,7 @@ def build_single_concept_teach_spec(
             "solicit_drawing":      concept.solicit_drawing,
             "drawing_rubric":       rubric_dicts,
         },
-        max_tokens = 1200,
+        max_tokens = 2000,
     )
 
     log.info(
@@ -407,7 +407,7 @@ def build_single_concept_jordan_spec(
             "solicit_drawing":     concept.solicit_drawing,
             "drawing_rubric":      rubric_dicts,
         },
-        max_tokens = 800,
+        max_tokens = 2000,
     )
 
     log.info(
