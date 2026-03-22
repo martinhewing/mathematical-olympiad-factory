@@ -319,6 +319,17 @@ def process_submission(
         except Exception as _e:
             log.warning("session_engine.curriculum_lookup_failed", error=str(_e))
 
+    # Build stateful conversation history for assess_submission.j2.
+    # Required to continue thread after off-topic turns.
+    # NOTE: assessment and teach turns excluded — they inject raw JSON blobs
+    # which break Claude's JSON output contract.
+    conversation_history = [
+        {"speaker": t.get("speaker", ""), "content": t.get("content", "")}
+        for t in (dll.current.turns if dll.current else [])
+        if t.get("turn_type") in ("text_submission", "probe")
+        and t.get("content")
+    ]
+
     raw = render_and_call("assess_submission.j2", {
         "problem_statement":     store.load_field(session_id, "problem_statement"),
         "candidate_level":       store.load_field(session_id, "candidate_level"),
@@ -338,6 +349,7 @@ def process_submission(
         "probe_limit":           probe_limit,
         "probe_history":         probe_history,
         "candidate_answer":      answer,
+        "conversation_history":  conversation_history,
         # E) diagram fields
         "has_candidate_diagram": bool(images),
         "curriculum_concepts":   curriculum_concepts,

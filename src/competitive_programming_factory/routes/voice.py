@@ -247,10 +247,32 @@ async def submit_voice_answer(
 
     transcript = await transcribe(audio_bytes, content_type=content_type)
 
-    if len(transcript.strip()) < 10:
+    # Soft guard — accidental press or mic noise. Return a nudge without
+    # touching the DLL so Jordan's conversation thread is unaffected.
+    if len(transcript.split()) < 8:
+        nudge = (
+            "Sorry, I didn't catch that — it sounded like the mic cut off. "
+            "Take your time and answer when you're ready."
+        )
+        return {
+            "verdict":               "PARTIAL",
+            "feedback":              nudge,
+            "probe":                 nudge,
+            "transcript":            transcript,
+            "concepts_demonstrated": [],
+            "concepts_missing":      [],
+            "next_url":              f"/session/{session_id}/stage/{stage_n}",
+            "session_complete":      False,
+            "input_mode":            "voice",
+        }
+
+    if len(transcript.strip()) > 4000:
         raise HTTPException(
             status_code=422,
-            detail="We couldn't hear that clearly. Check your microphone is connected and try again — speak for at least 3 seconds.",
+            detail=(
+                "That recording was too long to process. "
+                "Please keep your answer to around 4-5 minutes and try again."
+            ),
         )
 
     # Attach images to transcript for Claude assessment

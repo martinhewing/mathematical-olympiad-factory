@@ -36,7 +36,13 @@ CONCEPTS ALREADY CONFIRMED IN EARLIER STAGES:
 {% if probe_history %}{% for p in probe_history %}- {{ p }}
 {% endfor %}{% else %}None yet — this is the first answer.{% endif %}
 
-━━━ CANDIDATE'S ANSWER ━━━
+━━━ CONVERSATION SO FAR THIS STAGE ━━━
+{% if conversation_history %}{% for turn in conversation_history %}{{ turn.speaker | upper }}: {{ turn.content }}
+{% endfor %}{% else %}No prior turns — this is the opening answer.
+{% endif %}
+IMPORTANT: The conversation above is the full thread. If the candidate went off-topic in a prior turn, DO NOT reset. Continue from the last substantive probe that was not yet answered adequately.
+
+━━━ CANDIDATE'S CURRENT ANSWER ━━━
 {{ candidate_answer }}
 
 {% if has_candidate_diagram %}
@@ -67,6 +73,14 @@ when probing that concept — the candidate was taught it and should be able to 
   Excellence signal: {{ c.faang_signal }}
 {% endfor %}
 {% endif %}
+
+━━━ YOUR SCOPE THIS STAGE — HARD LIMIT ━━━
+You are assessing ONE concept and ONE concept only: {{ stage_title }}.
+RULES:
+- Only probe and assess {{ stage_title }}. Nothing else.
+- If the candidate's answer drifts into other concepts, acknowledge any relevant insight briefly, then steer back: 'Good instinct — we'll get to that. For now, tell me more about {{ stage_title }}.'
+- Do NOT confirm a concept the candidate hasn't addressed yet just because they mentioned it in passing.
+- Do NOT issue probes about concepts outside {{ stage_title }}.
 
 ━━━ YOUR ASSESSMENT TASK ━━━
 
