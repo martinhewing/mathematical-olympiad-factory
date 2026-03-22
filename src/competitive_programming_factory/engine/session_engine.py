@@ -85,8 +85,8 @@ def create_session(
     fsm.context.concept_ids = [c.id for c in _concepts]
     log.info(
         "session.concept_ids_set",
-        session_id   = session_id,
-        concept_ids  = fsm.context.concept_ids,
+        session_id    = session_id,
+        concept_ids   = fsm.context.concept_ids,
         concept_count = len(fsm.context.concept_ids),
     )
 
@@ -95,7 +95,6 @@ def create_session(
         fsm.transition_to(State.CONCEPT_TEACH, trigger="session_created")
 
     store.save(session_id, fsm, dll)
-
 
     log.info(
         "session.created",
@@ -225,12 +224,12 @@ def process_submission(
         spec       = get_or_generate_stage(session_id, stage_n)
         first_name = store.load_field(session_id, "candidate_first_name") or "there"
         check_result = render_and_call("teach_check.j2", {
-            "problem_statement":   store.load_field(session_id, "problem_statement"),
+            "problem_statement":    store.load_field(session_id, "problem_statement"),
             "candidate_first_name": first_name,
-            "candidate_answer":    answer,
-            "lesson_summary":      spec.get("ready_summary", ""),
-            "minimum_bar":         spec.get("minimum_bar", ""),
-            "comprehension_check": spec.get("comprehension_check", ""),
+            "candidate_answer":     answer,
+            "lesson_summary":       spec.get("ready_summary", ""),
+            "minimum_bar":          spec.get("minimum_bar", ""),
+            "comprehension_check":  spec.get("comprehension_check", ""),
         })
         understood = check_result.get("advance_to_simulation", False)
         feedback   = check_result.get("feedback", "")
@@ -252,7 +251,7 @@ def process_submission(
                 session_complete      = False,
             )
         else:
-            gap     = check_result.get("reteach", "")
+            gap = check_result.get("reteach", "")
             fsm.transition_to(State.TEACH_CHECK, trigger="comprehension_partial")
             store.save(session_id, fsm, dll)
             return AssessmentResponse(
@@ -271,6 +270,7 @@ def process_submission(
         for t in (dll.current.turns if dll.current else [])
         if t.get("turn_type") == "probe"
     ]
+    conversation_history = _build_conversation_history(dll)
 
     # Fetch concepts accumulated across prior turns this stage
     accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))
@@ -319,20 +319,10 @@ def process_submission(
         except Exception as _e:
             log.warning("session_engine.curriculum_lookup_failed", error=str(_e))
 
-    # Build stateful conversation history for assess_submission.j2.
-    # Required to continue thread after off-topic turns.
-    # NOTE: assessment and teach turns excluded — they inject raw JSON blobs
-    # which break Claude's JSON output contract.
-    conversation_history = [
-        {"speaker": t.get("speaker", ""), "content": t.get("content", "")}
-        for t in (dll.current.turns if dll.current else [])
-        if t.get("turn_type") in ("text_submission", "probe")
-        and t.get("content")
-    ]
-
     raw = render_and_call("assess_submission.j2", {
         "problem_statement":     store.load_field(session_id, "problem_statement"),
         "candidate_level":       store.load_field(session_id, "candidate_level"),
+        "candidate_first_name":  store.load_field(session_id, "candidate_name") or "",
         "session_type":          "system_design",
         "stage_title":           spec.get("stage_title", f"Stage {stage_n}"),
         "label_id":              f"STAGE-{stage_n}",
@@ -401,9 +391,7 @@ def process_submission(
         )
         probe = None
 
-    # Update concepts_missing from lattice (authoritative source)
     concepts_missing = sorted(lattice["missing"])
-    # ── End concept accumulation ──────────────────────────────────────
 
     if dll.current:
         dll.current.add_turn("claude", feedback, turn_type="assessment")
@@ -541,6 +529,29 @@ def _concepts_for_stage(problem_statement: str, stage_n: int) -> list[str]:
 # Per-concept architecture helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _build_conversation_history(dll: FactoryConversationHistory) -> list[dict]:
+    """
+    Full interleaved exchange for Imogen across current and previous DLL node.
+
+    Including the previous node ensures Imogen has context when a candidate
+    returns from a reteach loop — she can see what was discussed with Alistair
+    and what she herself probed before the reteach.
+
+    Assessment and teach turns are excluded — they inject raw JSON blobs
+    which break Claude's JSON output contract.
+    """
+    prior_turns   = (dll.current.prev.turns if dll.current and dll.current.prev else [])
+    current_turns = (dll.current.turns if dll.current else [])
+    return [
+        {"speaker": t.get("speaker", ""), "content": t.get("content", "")}
+        for t in prior_turns + current_turns
+        if t.get("turn_type") in (
+            "text_submission", "probe", "teach_question", "teach_response"
+        )
+        and t.get("content")
+    ]
+
+
 def _get_or_generate_concept_stage(
     session_id: str,
     stage_n:    int,
@@ -551,10 +562,10 @@ def _get_or_generate_concept_stage(
     Generate or return cached spec for a concept session stage.
 
     stage_n is the 1-based concept index.
-    FSM state determines whether Alex (CONCEPT_TEACH/CHECK) or
-    Jordan (CONCEPT_STAGE) is active.
+    FSM state determines whether Alistair (CONCEPT_TEACH/CHECK) or
+    Imogen (CONCEPT_STAGE) is active.
 
-    Cache key: "concept_{stage_n}_{alex|jordan}" so Alex and Jordan
+    Cache key: "concept_{stage_n}_{alex|jordan}" so Alistair and Imogen
     specs for the same concept are cached independently.
     """
     from competitive_programming_factory.domain.fsm.states import State as _State
@@ -595,13 +606,13 @@ def _get_or_generate_concept_stage(
         )
     else:
         spec = build_single_concept_jordan_spec(
-            session_id          = session_id,
-            concept             = concept,
-            problem_statement   = problem,
-            candidate_level     = level,
-            concept_index       = concept_idx,
-            concepts_total      = fsm.context.concepts_total,
-            concepts_confirmed  = fsm.context.concepts_confirmed,
+            session_id         = session_id,
+            concept            = concept,
+            problem_statement  = problem,
+            candidate_level    = level,
+            concept_index      = concept_idx,
+            concepts_total     = fsm.context.concepts_total,
+            concepts_confirmed = fsm.context.concepts_confirmed,
         )
 
     specs[cache_key] = spec
@@ -632,12 +643,12 @@ def _process_concept_submission(
     """
     Handle a submission for a per-concept session.
 
-    Alex path  (CONCEPT_TEACH / CONCEPT_TEACH_CHECK):
+    Alistair path  (CONCEPT_TEACH / CONCEPT_TEACH_CHECK):
       Run teach_check.j2 against single concept minimum bar.
       CONFIRMED → transition to CONCEPT_STAGE (same stage_n).
       PARTIAL   → transition to CONCEPT_TEACH_CHECK (reteach loop).
 
-    Jordan path (CONCEPT_STAGE):
+    Imogen path (CONCEPT_STAGE):
       Run diagram evaluator if images present.
       Run assess_submission.j2.
       CONFIRMED → confirm concept, advance_concept(), next stage.
@@ -655,22 +666,22 @@ def _process_concept_submission(
         dll.current.add_turn("candidate", answer, turn_type="text_submission")
     fsm.increment_turn()
 
-    # ── Alex path ─────────────────────────────────────────────────────────
+    # ── Alistair path ──────────────────────────────────────────────────────
     if fsm.state in {State.CONCEPT_TEACH, State.CONCEPT_TEACH_CHECK}:
         check_result = render_and_call("teach_check.j2", {
-            "problem_statement":   store.load_field(session_id, "problem_statement"),
+            "problem_statement":    store.load_field(session_id, "problem_statement"),
             "candidate_first_name": first_name,
-            "candidate_answer":    answer,
-            "lesson_summary":      spec.get("ready_summary", ""),
-            "minimum_bar":         spec.get("minimum_bar", ""),
-            "comprehension_check": spec.get("comprehension_check", ""),
+            "candidate_answer":     answer,
+            "lesson_summary":       spec.get("ready_summary", ""),
+            "minimum_bar":          spec.get("minimum_bar", ""),
+            "comprehension_check":  spec.get("comprehension_check", ""),
         })
 
         understood = check_result.get("advance_to_simulation", False)
         feedback   = check_result.get("feedback", "")
 
         if understood:
-            # Clear Alex's cached spec — Jordan needs a fresh one
+            # Clear Alistair's cached spec — Imogen needs a fresh one
             specs = store.load_field(session_id, "stage_specs") or {}
             specs.pop(f"concept_{stage_n}_alex", None)
             store.save_field(session_id, "stage_specs", specs)
@@ -717,7 +728,7 @@ def _process_concept_submission(
                 session_complete      = False,
             )
 
-    # ── Jordan path (CONCEPT_STAGE) ───────────────────────────────────────
+    # ── Imogen path (CONCEPT_STAGE) ───────────────────────────────────────
     if fsm.probe_limit_reached:
         fsm.flag_current_concept(
             f"Probe limit ({probe_limit}) reached on concept {fsm.context.current_concept_id}"
@@ -744,7 +755,7 @@ def _process_concept_submission(
         )
 
     # Diagram evaluation
-    pending_rubric  = store.load_field(session_id, f"pending_diagram_rubric_{stage_n}") or []
+    pending_rubric = store.load_field(session_id, f"pending_diagram_rubric_{stage_n}") or []
     diagram_scores: list[dict] = []
     if images and pending_rubric:
         raw_scores     = evaluate_diagram(images, pending_rubric)
@@ -779,12 +790,14 @@ def _process_concept_submission(
         for t in (dll.current.turns if dll.current else [])
         if t.get("turn_type") == "probe"
     ]
+    conversation_history = _build_conversation_history(dll)
 
     accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))
 
     raw = render_and_call("assess_submission.j2", {
         "problem_statement":     store.load_field(session_id, "problem_statement"),
         "candidate_level":       store.load_field(session_id, "candidate_level"),
+        "candidate_first_name":  store.load_field(session_id, "candidate_name") or "",
         "session_type":          "system_design",
         "stage_title":           spec.get("stage_title", f"Stage {stage_n}"),
         "label_id":              f"CONCEPT-{stage_n}",
@@ -801,6 +814,7 @@ def _process_concept_submission(
         "probe_limit":           probe_limit,
         "probe_history":         probe_history,
         "candidate_answer":      answer,
+        "conversation_history":  conversation_history,
         "has_candidate_diagram": bool(images),
         "curriculum_concepts":   curriculum_concepts,
         "diagram_scores":        diagram_scores,
@@ -849,7 +863,6 @@ def _process_concept_submission(
         if probe:
             dll.current.add_turn("claude", probe, turn_type="probe")
 
-    # Drive FSM
     next_url = _drive_concept_fsm(
         session_id, stage_n, verdict,
         concepts_demonstrated, raw.get("internal_notes", ""),
@@ -860,10 +873,10 @@ def _process_concept_submission(
 
     log.info(
         "concept.assessed",
-        session_id  = session_id,
-        stage_n     = stage_n,
-        concept_id  = concept_id,
-        verdict     = verdict,
+        session_id   = session_id,
+        stage_n      = stage_n,
+        concept_id   = concept_id,
+        verdict      = verdict,
         probe_rounds = fsm.context.probe_rounds,
     )
 
@@ -900,9 +913,8 @@ def _advance_concept_and_route(
             dll.add_stage("evaluate_001", "evaluate")
         return f"/session/{session_id}/evaluate"
 
-    # More concepts — transition to Alex for concept N+1
+    # More concepts — transition to Alistair for concept N+1
     next_stage = stage_n + 1
-    # Clear any cached jordan spec for the next stage (not generated yet)
     specs = store.load_field(session_id, "stage_specs") or {}
     specs.pop(f"concept_{next_stage}_jordan", None)
     store.save_field(session_id, "stage_specs", specs)
@@ -923,7 +935,7 @@ def _drive_concept_fsm(
     fsm:                   FactoryFSM,
     dll:                   FactoryConversationHistory,
 ) -> str | None:
-    """Drive FSM transitions for Jordan's CONCEPT_STAGE verdicts."""
+    """Drive FSM transitions for Imogen's CONCEPT_STAGE verdicts."""
     from competitive_programming_factory.domain.fsm.states import State
 
     if verdict == "CONFIRMED":
@@ -938,7 +950,6 @@ def _drive_concept_fsm(
         return _advance_concept_and_route(session_id, stage_n, fsm, dll)
 
     elif verdict == "PARTIAL":
-        # Stay on CONCEPT_STAGE — probe issued
         if fsm.can_transition_to(State.CONCEPT_STAGE):
             fsm.transition_to(State.CONCEPT_STAGE, trigger="partial_answer")
         return f"/session/{session_id}/stage/{stage_n}"
