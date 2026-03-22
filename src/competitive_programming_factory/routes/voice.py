@@ -1787,9 +1787,12 @@ function advanceStage(n) {{
 function resetForProbe() {{
   document.getElementById('assessment').className = 'assessment';
   document.getElementById('transcript-preview').className = 'transcript-preview';
-  // Keep whiteboard open on probe — candidate may still be drawing
-  // But reset the gate so they can re-answer verbally if the diagram is uploaded
-  updateSubmitGate();
+  // Re-activate whiteboard — written work always welcome on probe
+  activateWhiteboard({{
+    by:       'imogen',
+    required: false,
+    prompt:   'Upload written work or a proof sketch — optional',
+  }});
   enableRecording();
   document.getElementById('record-hint').textContent = 'Answer the follow-up';
 }}
