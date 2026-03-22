@@ -858,7 +858,7 @@ html, body {{
 .right-panel {{
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }}
 
 .candidate-header {{
@@ -888,9 +888,10 @@ html, body {{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-  gap: 32px;
+  padding: 20px 40px;
+  gap: 16px;
   position: relative;
+  min-height: 120px;
 }}
 
 /* ── Record button ───────────────────────────────────────────── */
@@ -1722,7 +1723,10 @@ function renderAssessment(a) {{
   if (stageData && stageData.phase === 'teach') {{
     const alexReply = a.probe || a.feedback || '';
     panel.innerHTML = `<div style="font-size:13px;color:#bbb;line-height:1.7;border-left:2px solid var(--accent);padding-left:12px;">${{alexReply}}</div>
-      <button class="next-btn" onclick="resetForProbe()" style="margin-top:8px;">Ask another question</button>`;
+  <div style="display:flex;gap:8px;margin-top:8px;">
+    <button class="next-btn" onclick="resetForProbe()">Ask another question</button>
+    <button class="next-btn" onclick="document.getElementById('whiteboard-input').click()" style="background:var(--bg3);border:1px solid var(--border);color:var(--muted);">+ written work</button>
+  </div>`;
     panel.className = 'assessment visible';
     speakResponse(alexReply.split('.').slice(0,2).join('.') + '.');
     return;
