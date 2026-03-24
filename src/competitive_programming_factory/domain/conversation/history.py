@@ -281,18 +281,12 @@ class FactoryConversationHistory:
     @property
     def all_comprehension_records(self) -> list[dict[str, Any]]:
         return [
-            node.comprehension_record
-            for node in self.iterate_oldest_first()
-            if node.comprehension_record is not None
+            node.comprehension_record for node in self.iterate_oldest_first() if node.comprehension_record is not None
         ]
 
     @property
     def confirmed_labels(self) -> list[str]:
-        return [
-            node.label_id
-            for node in self.iterate_oldest_first()
-            if node.status == "confirmed" and node.label_id
-        ]
+        return [node.label_id for node in self.iterate_oldest_first() if node.status == "confirmed" and node.label_id]
 
     def iterate_oldest_first(self) -> Iterator[FactoryNode]:
         node = self.tail
@@ -361,8 +355,5 @@ class FactoryConversationHistory:
 
     def __repr__(self) -> str:
         return (
-            f"FactoryConversationHistory("
-            f"size={self.size}, "
-            f"current={self.current.stage_id if self.current else None!r}"
-            f")"
+            f"FactoryConversationHistory(size={self.size}, current={self.current.stage_id if self.current else None!r})"
         )

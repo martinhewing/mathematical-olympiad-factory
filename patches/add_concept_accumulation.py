@@ -75,11 +75,7 @@ print("═" * 60)
 
 # Look in patches/src/... first, then patches/ directly
 CONCEPT_STORE_SRC = (
-    pathlib.Path(__file__).parent
-    / "src"
-    / "competitive_programming_factory"
-    / "engine"
-    / "concept_store.py"
+    pathlib.Path(__file__).parent / "src" / "competitive_programming_factory" / "engine" / "concept_store.py"
 )
 if not CONCEPT_STORE_SRC.exists():
     CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "concept_store.py"

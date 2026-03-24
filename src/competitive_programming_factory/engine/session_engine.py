@@ -216,9 +216,7 @@ def process_submission(
             ),
             probe=None,
             concepts_demonstrated=[],
-            concepts_missing=_concepts_for_stage(
-                store.load_field(session_id, "problem_statement") or "", stage_n
-            ),
+            concepts_missing=_concepts_for_stage(store.load_field(session_id, "problem_statement") or "", stage_n),
             next_url=f"/session/{session_id}/flagged",
             session_complete=False,
         )
@@ -283,11 +281,7 @@ def process_submission(
             )
 
     spec = get_or_generate_stage(session_id, stage_n)
-    probe_history = [
-        t["content"]
-        for t in (dll.current.turns if dll.current else [])
-        if t.get("turn_type") == "probe"
-    ]
+    probe_history = [t["content"] for t in (dll.current.turns if dll.current else []) if t.get("turn_type") == "probe"]
     conversation_history = _build_conversation_history(dll)
 
     # Fetch concepts accumulated across prior turns this stage
@@ -412,10 +406,7 @@ def process_submission(
             accumulated=sorted(lattice["accumulated"]),
         )
         verdict = "CONFIRMED"
-        feedback = (
-            feedback.rstrip()
-            + " — and with that, you've demonstrated everything needed for this stage."
-        )
+        feedback = feedback.rstrip() + " — and with that, you've demonstrated everything needed for this stage."
         probe = None
 
     concepts_missing = sorted(lattice["missing"])
@@ -584,8 +575,7 @@ def _build_conversation_history(dll: FactoryConversationHistory) -> list[dict]:
     return [
         {"speaker": t.get("speaker", ""), "content": t.get("content", "")}
         for t in prior_turns + current_turns
-        if t.get("turn_type") in ("text_submission", "probe", "teach_question", "teach_response")
-        and t.get("content")
+        if t.get("turn_type") in ("text_submission", "probe", "teach_question", "teach_response") and t.get("content")
     ]
 
 
@@ -616,9 +606,7 @@ def _get_or_generate_concept_stage(
     # Look up the concept — stage_n is 1-based
     concept_idx = stage_n - 1
     if concept_idx < 0 or concept_idx >= len(fsm.context.concept_ids):
-        raise ValueError(
-            f"stage_n={stage_n} out of range for {len(fsm.context.concept_ids)} concepts"
-        )
+        raise ValueError(f"stage_n={stage_n} out of range for {len(fsm.context.concept_ids)} concepts")
 
     concept_id = fsm.context.concept_ids[concept_idx]
     concept = CONCEPT_BY_ID.get(concept_id)
@@ -756,9 +744,7 @@ def _process_concept_submission(
             return AssessmentResponse(
                 verdict="PARTIAL",
                 feedback=feedback,
-                probe=(
-                    check_result.get("reteach", "") or check_result.get("comprehension_check", "")
-                ),
+                probe=(check_result.get("reteach", "") or check_result.get("comprehension_check", "")),
                 concepts_demonstrated=[],
                 concepts_missing=[check_result.get("gap_concept", "")],
                 next_url=f"/session/{session_id}/stage/{stage_n}",
@@ -767,9 +753,7 @@ def _process_concept_submission(
 
     # ── Imogen path (CONCEPT_STAGE) ───────────────────────────────────────
     if fsm.probe_limit_reached:
-        fsm.flag_current_concept(
-            f"Probe limit ({probe_limit}) reached on concept {fsm.context.current_concept_id}"
-        )
+        fsm.flag_current_concept(f"Probe limit ({probe_limit}) reached on concept {fsm.context.current_concept_id}")
         next_url = _advance_concept_and_route(session_id, stage_n, fsm, dll)
         store.save(session_id, fsm, dll)
         log.warning(
@@ -780,10 +764,7 @@ def _process_concept_submission(
         )
         return AssessmentResponse(
             verdict="NOT_MET",
-            feedback=(
-                f"We've explored this across {probe_limit} rounds. "
-                "Let's move on — we'll come back to this."
-            ),
+            feedback=(f"We've explored this across {probe_limit} rounds. Let's move on — we'll come back to this."),
             probe=None,
             concepts_demonstrated=[],
             concepts_missing=[spec.get("concept_id", "")],
@@ -818,17 +799,12 @@ def _process_concept_submission(
                 "jordan_minimum_bar": c.jordan_minimum_bar,
                 "faang_signal": c.faang_signal,
                 "drawing_rubric": [
-                    {"label": r.label, "description": r.description, "required": r.required}
-                    for r in c.drawing_rubric
+                    {"label": r.label, "description": r.description, "required": r.required} for r in c.drawing_rubric
                 ],
             }
         ]
 
-    probe_history = [
-        t["content"]
-        for t in (dll.current.turns if dll.current else [])
-        if t.get("turn_type") == "probe"
-    ]
+    probe_history = [t["content"] for t in (dll.current.turns if dll.current else []) if t.get("turn_type") == "probe"]
     conversation_history = _build_conversation_history(dll)
 
     accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))
@@ -881,10 +857,7 @@ def _process_concept_submission(
     lattice = evaluate_concepts(session_id, stage_n)
     if verdict == "PARTIAL" and lattice["passed"]:
         verdict = "CONFIRMED"
-        feedback = (
-            feedback.rstrip()
-            + " — and with that, you've demonstrated everything needed for this concept."
-        )
+        feedback = feedback.rstrip() + " — and with that, you've demonstrated everything needed for this concept."
         probe = None
     concepts_missing = sorted(lattice["missing"])
 

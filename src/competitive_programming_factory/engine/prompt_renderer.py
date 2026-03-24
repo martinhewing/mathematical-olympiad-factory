@@ -81,9 +81,7 @@ def render_and_call(
     max_tokens: int = 2000,
     images: list | None = None,
 ) -> dict[str, Any]:
-    return _parse_json(
-        call_claude(render(template_name, context), max_tokens, images=images), template_name
-    )
+    return _parse_json(call_claude(render(template_name, context), max_tokens, images=images), template_name)
 
 
 def _parse_json(raw: str, source: str = "") -> dict[str, Any]:
@@ -107,7 +105,4 @@ def _parse_json(raw: str, source: str = "") -> dict[str, Any]:
         response_len=len(text),
         preview=text[:200],
     )
-    raise ValueError(
-        f"Could not parse JSON from Claude response (template: {source}). "
-        f"First 300 chars: {text[:300]!r}"
-    )
+    raise ValueError(f"Could not parse JSON from Claude response (template: {source}). First 300 chars: {text[:300]!r}")

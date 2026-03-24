@@ -38,9 +38,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         s = get_settings()
-        limit = (
-            s.rate_limit_sessions_per_hour if group == "sessions" else s.rate_limit_submits_per_hour
-        )
+        limit = s.rate_limit_sessions_per_hour if group == "sessions" else s.rate_limit_submits_per_hour
         api_key = request.headers.get("X-API-Key", "anon")
         key = (api_key, group)
         now = time.monotonic()

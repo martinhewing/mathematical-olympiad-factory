@@ -688,9 +688,7 @@ if "_get_or_generate_concept_stage" in src and "_drive_concept_fsm" in src:
     changes.append("HELPERS — already applied")
 else:
     src = src + HELPERS
-    changes.append(
-        "HELPERS — _get_or_generate_concept_stage, _process_concept_submission, _drive_concept_fsm appended"
-    )
+    changes.append("HELPERS — _get_or_generate_concept_stage, _process_concept_submission, _drive_concept_fsm appended")
 
 
 # =============================================================================

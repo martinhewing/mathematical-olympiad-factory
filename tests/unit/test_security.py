@@ -77,9 +77,7 @@ def wrong_key(secure_app):
 
 @pytest.fixture
 def authed(secure_app):
-    return TestClient(
-        secure_app, headers={"X-API-Key": _CORRECT_KEY}, raise_server_exceptions=False
-    )
+    return TestClient(secure_app, headers={"X-API-Key": _CORRECT_KEY}, raise_server_exceptions=False)
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
@@ -131,14 +129,10 @@ class TestRateLimiting:
             return_value=mock_scene,
         ):
             for _ in range(3):
-                r = authed.post(
-                    "/sessions", json={"problem_statement": "Design a URL shortener service"}
-                )
+                r = authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
                 assert r.status_code == 201
 
-            r = authed.post(
-                "/sessions", json={"problem_statement": "Design a URL shortener service"}
-            )
+            r = authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
 
         assert r.status_code == 429
         assert "retry_after_seconds" in r.json()
@@ -149,12 +143,8 @@ class TestRateLimiting:
             return_value=mock_scene,
         ):
             for _ in range(3):
-                authed.post(
-                    "/sessions", json={"problem_statement": "Design a URL shortener service"}
-                )
-            r = authed.post(
-                "/sessions", json={"problem_statement": "Design a URL shortener service"}
-            )
+                authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
+            r = authed.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
 
         assert "Retry-After" in r.headers
 
@@ -169,9 +159,7 @@ class TestRateLimiting:
             return_value=mock_scene,
         ):
             for _ in range(3):
-                client_a.post(
-                    "/sessions", json={"problem_statement": "Design a URL shortener service"}
-                )
+                client_a.post("/sessions", json={"problem_statement": "Design a URL shortener service"})
 
         assert (_CORRECT_KEY + "-other", "sessions") not in rl_module._windows
 
@@ -199,9 +187,7 @@ class TestInputValidation:
             "competitive_programming_factory.engine.session_engine._generate_scene",
             return_value=mock_scene,
         ):
-            r = authed.post(
-                "/sessions", json={"problem_statement": "Design a hotel reservation system"}
-            )
+            r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 
         r = authed.post(
@@ -215,9 +201,7 @@ class TestInputValidation:
             "competitive_programming_factory.engine.session_engine._generate_scene",
             return_value=mock_scene,
         ):
-            r = authed.post(
-                "/sessions", json={"problem_statement": "Design a hotel reservation system"}
-            )
+            r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 
         r = authed.get(f"/session/{sid}/stage/9999")
@@ -228,9 +212,7 @@ class TestInputValidation:
             "competitive_programming_factory.engine.session_engine._generate_scene",
             return_value=mock_scene,
         ):
-            r = authed.post(
-                "/sessions", json={"problem_statement": "Design a hotel reservation system"}
-            )
+            r = authed.post("/sessions", json={"problem_statement": "Design a hotel reservation system"})
         sid = r.json()["session_id"]
 
         r = authed.get(f"/session/{sid}/stage/0")

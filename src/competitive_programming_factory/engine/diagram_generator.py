@@ -178,10 +178,7 @@ def get_or_generate_concept_diagram(concept_id: str) -> DiagramResult:
         DiagramGenerationError: Claude failed to produce valid SVG after retries.
     """
     if concept_id not in CONCEPT_BY_ID:
-        raise KeyError(
-            f"concept_id '{concept_id}' not found in curriculum. "
-            f"Valid ids: {sorted(CONCEPT_BY_ID.keys())}"
-        )
+        raise KeyError(f"concept_id '{concept_id}' not found in curriculum. Valid ids: {sorted(CONCEPT_BY_ID.keys())}")
 
     concept = CONCEPT_BY_ID[concept_id]
     cache_key = f"{_CACHE_KEY_PREFIX}{concept_id}"

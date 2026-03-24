@@ -190,9 +190,7 @@ async def speak_text(session_id: str, payload: dict):
         from competitive_programming_factory.config import get_settings as _settings
 
         cfg = _settings()
-        use_voice = (
-            cfg.cartesia_tutor_voice_id if req_voice == "ALISTAIR_VOICE" else cfg.cartesia_voice_id
-        )
+        use_voice = cfg.cartesia_tutor_voice_id if req_voice == "ALISTAIR_VOICE" else cfg.cartesia_voice_id
         await generate_tts(speak_text, save_path=tmp, voice_id=use_voice)
         audio = Path(tmp).read_bytes()
     finally:
@@ -232,8 +230,7 @@ async def submit_voice_answer(
         duration = None
     if word_count < 8:
         nudge = (
-            "Sorry, I didn't catch that — it sounded like the mic cut off. "
-            "Take your time and answer when you're ready."
+            "Sorry, I didn't catch that — it sounded like the mic cut off. Take your time and answer when you're ready."
         )
         return {
             "verdict": "PARTIAL",
@@ -264,8 +261,7 @@ async def submit_voice_answer(
         raise HTTPException(
             status_code=422,
             detail=(
-                "That recording was too long to process. "
-                "Please keep your answer to around 4-5 minutes and try again."
+                "That recording was too long to process. Please keep your answer to around 4-5 minutes and try again."
             ),
         )
     image_data = []

@@ -86,9 +86,7 @@ class TestSubmissionDrivesState:
         ):
             return engine.create_session("Design a hotel reservation system")
 
-    def test_confirmed_verdict_advances_fsm_to_next_stage(
-        self, mock_scene, mock_stage_spec, mock_confirmed_assessment
-    ):
+    def test_confirmed_verdict_advances_fsm_to_next_stage(self, mock_scene, mock_stage_spec, mock_confirmed_assessment):
         sid = self._make_session(mock_scene)
 
         with (
@@ -101,9 +99,7 @@ class TestSubmissionDrivesState:
                 return_value=mock_confirmed_assessment,
             ),
         ):
-            result = engine.process_submission(
-                sid, stage_n=1, answer="I would start by clarifying scale."
-            )
+            result = engine.process_submission(sid, stage_n=1, answer="I would start by clarifying scale.")
 
         assert result.verdict == "CONFIRMED"
         assert result.next_url == f"/session/{sid}/stage/2"
@@ -129,9 +125,7 @@ class TestSubmissionDrivesState:
         confirmed = [n for n in dll.iterate_oldest_first() if n.status == "confirmed"]
         assert len(confirmed) >= 1
 
-    def test_partial_verdict_stays_on_same_stage(
-        self, mock_scene, mock_stage_spec, mock_partial_assessment
-    ):
+    def test_partial_verdict_stays_on_same_stage(self, mock_scene, mock_stage_spec, mock_partial_assessment):
         sid = self._make_session(mock_scene)
 
         with (
@@ -173,9 +167,7 @@ class TestSubmissionDrivesState:
                 "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
                 return_value=mock_stage_spec,
             ),
-            patch(
-                "competitive_programming_factory.engine.session_engine.render_and_call"
-            ) as mock_claude,
+            patch("competitive_programming_factory.engine.session_engine.render_and_call") as mock_claude,
         ):
             result = engine.process_submission(sid, stage_n=1, answer="Still struggling.")
 
@@ -205,9 +197,7 @@ class TestStatePolling:
     def test_state_returns_none_for_unknown_session(self):
         assert engine.get_state("nonexistent") is None
 
-    def test_confirmed_stage_advances_next_url_to_stage_2(
-        self, mock_scene, mock_stage_spec, mock_confirmed_assessment
-    ):
+    def test_confirmed_stage_advances_next_url_to_stage_2(self, mock_scene, mock_stage_spec, mock_confirmed_assessment):
         with patch(
             "competitive_programming_factory.engine.session_engine._generate_scene",
             return_value=mock_scene,

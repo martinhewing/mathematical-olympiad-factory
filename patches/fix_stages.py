@@ -32,10 +32,7 @@ def teach_complete(session_id: str):
 
 @router.post("/session/{session_id}/stage/{stage_n}/submit")'''
 
-if (
-    '@router.post("/session/{session_id}/stage/{stage_n}/submit")' in text
-    and "teach/complete" not in text
-):
+if '@router.post("/session/{session_id}/stage/{stage_n}/submit")' in text and "teach/complete" not in text:
     open(path, "w").write(text.replace(old, new))
     print("Fixed")
 else:

@@ -270,8 +270,5 @@ def _require_valid_concept(concept_id: str) -> None:
     if concept_id not in CONCEPT_BY_ID:
         raise HTTPException(
             status_code=404,
-            detail=(
-                f"Concept '{concept_id}' not found. "
-                f"Valid concept_ids: {sorted(CONCEPT_BY_ID.keys())}"
-            ),
+            detail=(f"Concept '{concept_id}' not found. Valid concept_ids: {sorted(CONCEPT_BY_ID.keys())}"),
         )

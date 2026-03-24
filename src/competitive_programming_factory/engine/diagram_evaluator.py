@@ -102,9 +102,7 @@ def evaluate_diagram(
     if not images:
         log.warning("diagram_evaluator.no_images")
         return [
-            DiagramScore(
-                label=r.get("label", f"item_{i}"), status="UNKNOWN", notes="No diagram submitted"
-            )
+            DiagramScore(label=r.get("label", f"item_{i}"), status="UNKNOWN", notes="No diagram submitted")
             for i, r in enumerate(rubric[:_MAX_RUBRIC])
         ]
 
@@ -136,9 +134,7 @@ def evaluate_diagram(
 
 def _build_prompt(rubric: list[dict]) -> str:
     rubric_lines = "\n".join(
-        f"  {i + 1}. [{r['label']}] "
-        f"{'(REQUIRED) ' if r.get('required') else ''}"
-        f"{r.get('description', '')}"
+        f"  {i + 1}. [{r['label']}] {'(REQUIRED) ' if r.get('required') else ''}{r.get('description', '')}"
         for i, r in enumerate(rubric)
     )
     labels_json = json.dumps([r["label"] for r in rubric])
@@ -293,9 +289,6 @@ def diagram_summary(scores: list[DiagramScore]) -> str:
     counts = {"PRESENT": 0, "PARTIAL": 0, "MISSING": 0, "UNKNOWN": 0}
     for s in scores:
         counts[s.status] = counts.get(s.status, 0) + 1
-    return (
-        f"{counts['PRESENT']} present, "
-        f"{counts['PARTIAL']} partial, "
-        f"{counts['MISSING']} missing"
-        + (f", {counts['UNKNOWN']} unknown" if counts["UNKNOWN"] else "")
+    return f"{counts['PRESENT']} present, {counts['PARTIAL']} partial, {counts['MISSING']} missing" + (
+        f", {counts['UNKNOWN']} unknown" if counts["UNKNOWN"] else ""
     )

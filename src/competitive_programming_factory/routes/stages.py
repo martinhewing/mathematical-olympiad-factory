@@ -192,8 +192,7 @@ async def teach_ask(
     # ── 2. Short-circuit accidental/empty recordings ──────────────────────
     if len(transcript.split()) < 8:
         nudge = (
-            "Sorry, I didn't catch that — it sounded like the mic cut off. "
-            "Take your time and ask when you're ready."
+            "Sorry, I didn't catch that — it sounded like the mic cut off. Take your time and ask when you're ready."
         )
         return {
             "verdict": "PARTIAL",
@@ -234,8 +233,7 @@ async def teach_ask(
         if t.get("speaker") == "alex" and t.get("content")
     ]
     already_covered = (
-        "WHAT YOU HAVE ALREADY SAID (do NOT repeat any of this):\n"
-        + "\n".join(f"- {t[:120]}" for t in alex_prior)
+        "WHAT YOU HAVE ALREADY SAID (do NOT repeat any of this):\n" + "\n".join(f"- {t[:120]}" for t in alex_prior)
         if alex_prior
         else "Nothing covered yet — this is your opening."
     )

@@ -29,7 +29,7 @@ def _settings():
 
 async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -> bytes:
     """Generate TTS audio and save to disk. Returns raw bytes."""
-    settings = _settings()
+    _settings()  # noqa: F841
     log.info("tts.generate.start", chars=len(text), model=settings.cartesia_model)
 
     path = Path(save_path)
@@ -51,7 +51,7 @@ async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -
 
 async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[bytes, None]:
     """Generate TTS and yield the full WAV in one chunk."""
-    settings = _settings()
+    _settings()  # noqa: F841
     import os
     import tempfile
 
@@ -68,5 +68,5 @@ async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[b
 
 
 def audio_path(session_id: str, stage_n: int, phase: str = "interview") -> str:
-    settings = _settings()
+    _settings()  # noqa: F841
     return f"{settings.audio_storage_dir}/{session_id}_{phase}_stage_{stage_n}.mp3"

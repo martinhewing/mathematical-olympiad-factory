@@ -64,9 +64,7 @@ class DLLVisualizer:
 
         for node in self.history.iterate_oldest_first():
             if node.next:
-                dot.edge(
-                    node.stage_id, node.next.stage_id, label="next", color="#374151", fontsize="8"
-                )
+                dot.edge(node.stage_id, node.next.stage_id, label="next", color="#374151", fontsize="8")
                 dot.edge(
                     node.next.stage_id,
                     node.stage_id,

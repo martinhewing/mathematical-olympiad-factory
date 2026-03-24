@@ -34,9 +34,7 @@ if "StaticFiles" not in app_src:
         "from fastapi import FastAPI, Response\nfrom fastapi.staticfiles import StaticFiles",
     )
 elif "Response" not in app_src:
-    app_src = app_src.replace(
-        "from fastapi import FastAPI", "from fastapi import FastAPI, Response"
-    )
+    app_src = app_src.replace("from fastapi import FastAPI", "from fastapi import FastAPI, Response")
 
 # Mount static files + favicon endpoint after app = FastAPI(...)
 STATIC_BLOCK = """

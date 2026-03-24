@@ -85,8 +85,7 @@ def _fsm_json_fallback(fsm) -> dict:
         "phase": fsm.phase,
         "valid_transitions": [s.value for s in fsm.get_valid_transitions()],
         "recent_transitions": [
-            {"from": t.from_state, "to": t.to_state, "trigger": t.trigger}
-            for t in fsm.history[-10:]
+            {"from": t.from_state, "to": t.to_state, "trigger": t.trigger} for t in fsm.history[-10:]
         ],
         "note": "Graphviz not available — install graphviz system package for SVG output",
     }

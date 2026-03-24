@@ -3,9 +3,7 @@ text = open(path).read()
 
 # Fix 1: Add playedAudio tracker after SESSION_ID
 old1 = "  const SESSION_ID = window.location.pathname.split('/')[2];"
-new1 = (
-    "  const SESSION_ID = window.location.pathname.split('/')[2];\n  const playedAudio = new Set();"
-)
+new1 = "  const SESSION_ID = window.location.pathname.split('/')[2];\n  const playedAudio = new Set();"
 
 # Fix 2: Skip audio if already played
 old2 = "    // Enable record button immediately\n    enableRecording();\n    // Only play audio once per stage+phase combination\n    const audioKey = (stageData.phase || 'interview') + ':' + n;\n    if (!playedAudio.has(audioKey)) {{\n      playedAudio.add(audioKey);\n      playStageAudio(n);\n    }}"

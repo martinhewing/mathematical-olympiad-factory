@@ -29,8 +29,7 @@ class FSMTransitionError(Exception):
         self.to_state = to_state
         self.valid_transitions = valid_transitions
         super().__init__(
-            f"Invalid transition: {from_state!r} -> {to_state!r}. "
-            f"Valid from here: {sorted(valid_transitions)}"
+            f"Invalid transition: {from_state!r} -> {to_state!r}. Valid from here: {sorted(valid_transitions)}"
         )
 
 
@@ -107,10 +106,7 @@ class FactoryFSM:
         Covers both the new per-concept architecture (CONCEPT_STAGE) and
         the legacy architecture (OOD_STAGE).
         """
-        return (
-            self._state in {State.CONCEPT_STAGE, State.OOD_STAGE}
-            and self._context.probe_rounds >= PROBE_LIMIT
-        )
+        return self._state in {State.CONCEPT_STAGE, State.OOD_STAGE} and self._context.probe_rounds >= PROBE_LIMIT
 
     @property
     def requires_voice(self) -> bool:
@@ -351,14 +347,5 @@ class FactoryFSM:
         }
 
     def __repr__(self) -> str:
-        concept = (
-            f", concept={self._context.current_concept_id!r}" if self.is_concept_session else ""
-        )
-        return (
-            f"FactoryFSM("
-            f"state={self._state.name!r}, "
-            f"phase={self.phase!r}, "
-            f"turns={self._turns_in_state}"
-            f"{concept}"
-            f")"
-        )
+        concept = f", concept={self._context.current_concept_id!r}" if self.is_concept_session else ""
+        return f"FactoryFSM(state={self._state.name!r}, phase={self.phase!r}, turns={self._turns_in_state}{concept})"

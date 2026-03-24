@@ -275,8 +275,7 @@ def build_single_concept_teach_spec(
         and the whiteboard UI.
     """
     rubric_dicts = [
-        {"label": r.label, "description": r.description, "required": r.required}
-        for r in concept.drawing_rubric
+        {"label": r.label, "description": r.description, "required": r.required} for r in concept.drawing_rubric
     ]
 
     log.info(
@@ -379,8 +378,7 @@ def build_single_concept_jordan_spec(
         and the whiteboard UI.
     """
     rubric_dicts = [
-        {"label": r.label, "description": r.description, "required": r.required}
-        for r in concept.drawing_rubric
+        {"label": r.label, "description": r.description, "required": r.required} for r in concept.drawing_rubric
     ]
 
     # Build strong/weak answer signals from curriculum fields

@@ -645,8 +645,7 @@ _C6 = Concept(
         "any $n > 10$ equals $(n-3)$ plus 3, so by induction (or a '+3 step') every "
         "larger integer inherits achievability.",
         "Base cases: $8 = 3 + 5$, $9 = 3 \\times 3$, $10 = 2 \\times 5$.",
-        "Inductive step: if $n \\geq 11$, then $n - 3 \\geq 8$. By induction $n - 3 = 3a + 5b$, "
-        "so $n = 3(a+1) + 5b$.",
+        "Inductive step: if $n \\geq 11$, then $n - 3 \\geq 8$. By induction $n - 3 = 3a + 5b$, so $n = 3(a+1) + 5b$.",
         "Best-possible: $n = 7$ is NOT achievable ($7 = 3a + 5b$ has no non-negative solution), "
         "so the threshold cannot be lowered below 8.",
         "Corollary 1: if $n \\in \\{0, 3, 5, 6\\}$ or $n \\geq 8$, then $n = 3a + 5b$ "
@@ -773,10 +772,8 @@ _C7 = Concept(
         "as $n = 3a + sb$ with $a, b \\geq 0$. Moreover $2(s-1)$ is best possible.",
         "Proof strategy (same '+3 step'): show $2s-2$, $2s-1$, and $2s$ are each achievable, "
         "then induct with '+3' steps.",
-        "Case $s = 3t+1$: $2s - 2 = 6t = 3 \\times 2t$ ✓. "
-        "And $2s - 1 = s + 3t = s + (s-1) = s + 3t$ ✓.",
-        "Case $s = 3t+2$: $2s - 2 = s + (s-2) = s + 3t + 2 - 2 = s + 3t$ ✓. "
-        "And $2s - 1 = 3(2t+1)$ ✓.",
+        "Case $s = 3t+1$: $2s - 2 = 6t = 3 \\times 2t$ ✓. And $2s - 1 = s + 3t = s + (s-1) = s + 3t$ ✓.",
+        "Case $s = 3t+2$: $2s - 2 = s + (s-2) = s + 3t + 2 - 2 = s + 3t$ ✓. And $2s - 1 = 3(2t+1)$ ✓.",
         "Best-possible: $2s - 3$ is NEVER achievable as $3a + sb$ with $a, b \\geq 0$ "
         "(regardless of $s$, provided $3 \\nmid s$). This requires a separate divisibility argument.",
     ],
@@ -897,8 +894,7 @@ _C8 = Concept(
         "The bound $(r-1)(s-1)$ is best possible.",
         "The threshold $(r-1)(s-1)$ is called the Frobenius number (or coin problem number) "
         "of $r$ and $s$, sometimes written $g(r, s)$. For $r=3, s=5$: $g(3,5) = (2)(4) = 8 - 1 = 7$ ✓.",
-        "Remark B (best-possible): $(r-1)(s-1) - 1$ is NOT achievable as $ar + bs$ "
-        "with $a, b \\geq 0$.",
+        "Remark B (best-possible): $(r-1)(s-1) - 1$ is NOT achievable as $ar + bs$ with $a, b \\geq 0$.",
         "Theorem C (symmetry): among the integers $\\{0, 1, \\ldots, (r-1)(s-1) - 1\\}$, "
         "exactly half are expressible in the form $ar + bs$ ($a, b \\geq 0$) and exactly "
         "half are not. This is a beautiful structural symmetry.",
