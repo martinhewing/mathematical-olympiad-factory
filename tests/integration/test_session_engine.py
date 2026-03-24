@@ -23,6 +23,8 @@ from competitive_programming_factory.engine import session_engine as engine
 
 @pytest.mark.integration
 @pytest.mark.skip(reason="FSM refactored to concept architecture")
+
+@pytest.mark.skip(reason="FSM refactored to concept architecture")
 class TestSessionCreation:
     """
     create_session is the integration point that initialises every layer.
@@ -74,6 +76,8 @@ class TestSessionCreation:
 
 
 @pytest.mark.integration
+@pytest.mark.skip(reason="FSM refactored to concept architecture")
+
 @pytest.mark.skip(reason="FSM refactored to concept architecture")
 class TestSubmissionDrivesState:
     """
@@ -179,6 +183,8 @@ class TestSubmissionDrivesState:
 
 
 @pytest.mark.integration
+@pytest.mark.skip(reason="FSM refactored to concept architecture")
+
 @pytest.mark.skip(reason="FSM refactored to concept architecture")
 class TestStatePolling:
     """
