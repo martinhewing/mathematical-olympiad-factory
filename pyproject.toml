@@ -46,9 +46,12 @@ markers      = [
 line-length = 120
 
 [tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
 ignore = ["E501"]
 
-[tool.ruff.lint]
+
+
+
 select = ["E", "F", "I", "UP"]
 
 [build-system]
