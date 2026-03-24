@@ -390,7 +390,7 @@ def process_submission(
 
     # ── Concept accumulation (semilattice) ────────────────────────────
     record_fragment(session_id, stage_n, answer)
-    accumulated = accumulate_concepts(
+    accumulate_concepts(
         session_id,
         stage_n,
         concepts_demonstrated,
@@ -848,7 +848,7 @@ def _process_concept_submission(
 
     # Concept accumulation (semilattice — same as legacy path)
     record_fragment(session_id, stage_n, answer)
-    accumulated = accumulate_concepts(
+    accumulate_concepts(
         session_id,
         stage_n,
         concepts_demonstrated,

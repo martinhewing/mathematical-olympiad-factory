@@ -51,7 +51,7 @@ async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -
 
 async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[bytes, None]:
     """Generate TTS and yield the full WAV in one chunk."""
-    settings = _settings()
+    _settings()
     import os
     import tempfile
 

@@ -7,12 +7,12 @@ Field length limits are the first line of defence against token amplification.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class CandidateLevel(str, Enum):
+class CandidateLevel(StrEnum):
     JUNIOR = "junior"
     SENIOR = "senior"
     STAFF = "staff"

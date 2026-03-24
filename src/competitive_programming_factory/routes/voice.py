@@ -64,7 +64,7 @@ def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
     fsm_state = state_data.get("fsm_state", "")
     agent = get_agent_for_state(fsm_state)
     voice_id = agent.voice_id(_settings())
-    first_name = store.load_field(session_id, "candidate_first_name") or "there"
+    store.load_field(session_id, "candidate_first_name") or "there"
     _TEACH_STATES = {
         "Teach",
         "Teach Comprehension Check",
