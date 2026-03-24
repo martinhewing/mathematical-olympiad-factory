@@ -1,3 +1,4 @@
+import os
 """
 tests/smoke/test_critical_paths.py
 
@@ -59,7 +60,7 @@ class TestSessionLifecycleIsReachable:
     Must complete in under 5 seconds.
     """
 
-    def test_create_session_and_reach_stage_one(self, client, mock_scene, mock_stage_spec):
+    @pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="No API key in CI")    def test_create_session_and_reach_stage_one(self, client, mock_scene, mock_stage_spec):
         with patch(
             "competitive_programming_factory.engine.session_engine._generate_scene",
             return_value=mock_scene,
