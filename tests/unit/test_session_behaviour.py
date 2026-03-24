@@ -17,7 +17,6 @@ from competitive_programming_factory.domain.fsm.states import State
 
 
 @pytest.mark.unit
-
 @pytest.mark.skip(reason="FSM refactored to concept architecture")
 class TestFSMEnforcesSessionOrder:
     """
@@ -61,7 +60,6 @@ class TestFSMEnforcesSessionOrder:
 
 
 @pytest.mark.unit
-
 @pytest.mark.skip(reason="FSM refactored to concept architecture")
 class TestProbeLimitEnforcement:
     """
