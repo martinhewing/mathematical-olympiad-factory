@@ -1,5 +1,3 @@
-import os
-
 """
 tests/smoke/test_critical_paths.py
 
@@ -10,6 +8,7 @@ Rule: if any smoke test fails, the deployment is rolled back.
 Must complete in under 10 seconds total.
 """
 
+import os
 from unittest.mock import patch
 
 import pytest
