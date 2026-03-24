@@ -1,25 +1,26 @@
-<h1 align="center">Competitive Programming Factory</h1>
+<h1 align="center">Mathematical Olympiad Factory</h1>
 
 <p align="center">
-  <strong>A voice-driven mathematical olympiad tutor, calibrated to competition and FAANG technical-interview problem-solving bar.</strong>
+  <strong>A voice-driven mathematical olympiad tutor, calibrated to competition and FAANG problem-solving bar.</strong>
 </p>
 
 <p align="center">
-  <a href="https://competitive-programming.connectaiml.com/docs"><img src="https://img.shields.io/badge/API_Explorer-competitive--programming.connectaiml.com%2Fdocs-00cfff?style=for-the-badge" alt="API Explorer" /></a>
+  <a href="https://math-olympiad.connectaiml.com/docs"><img src="https://img.shields.io/badge/API_Explorer-math--olympiad.connectaiml.com%2Fdocs-00cfff?style=for-the-badge" alt="API Explorer" /></a>
 </p>
 <p align="center">
-  Session UI: <code>https://competitive-programming.connectaiml.com/session/{id}/interview</code>
+  Session UI: <code>https://math-olympiad.connectaiml.com/session/{id}/interview</code>
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick&nbsp;Start</a>&ensp;·&ensp;
   <a href="#how-a-session-works">How&nbsp;It&nbsp;Works</a>&ensp;·&ensp;
   <a href="#api-reference">API&nbsp;Reference</a>&ensp;·&ensp;
-  <a href="#curriculum">Curriculum</a>
+  <a href="#curriculum">Curriculum</a>&ensp;·&ensp;
+  <a href="#open-source-contributions">OSS&nbsp;Contributions</a>
 </p>
 
 <p align="center">
-  <img src="https://github.com/martinhewing/competitive-programming-factory/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <img src="https://github.com/martinhewing/mathematical-olympiad-factory/actions/workflows/ci.yml/badge.svg" alt="CI" />
   <img src="https://img.shields.io/badge/python-3.12-blue" alt="Python 3.12" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT License" />
 </p>
@@ -28,7 +29,7 @@
 
 ## What Is This?
 
-Most competitive programming prep is reading solutions after you've given up. Competitive Programming Factory is different — you **speak** your reasoning into a live tutoring session, and two AI agents teach, probe, and score you in real time.
+Most mathematical olympiad prep is reading solutions after you've given up. Mathematical Olympiad Factory is different — you **speak** your reasoning into a live tutoring session, and two AI agents teach, probe, and score you in real time.
 
 Give it a problem — *"Prove that every integer n ≥ 8 can be written as 3a + 5b"*, *"Find all consecutive-integer representations of 1000"*, *"State and prove Bézout's identity"* — and it runs a full session loop: concept teaching, comprehension checks, proof-rigour probes, and a detailed debrief at the end.
 
@@ -38,13 +39,13 @@ Built around the curriculum of *First Step to Mathematical Olympiad Problems* (M
 
 ```bash
 # 1. Create a session (returns a session_id)
-curl -X POST https://competitive-programming.connectaiml.com/sessions \
+curl -X POST https://math-olympiad.connectaiml.com/sessions \
   -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"problem_statement": "Prove the Frobenius coin theorem for r=3, s=5", "candidate_name": "Your Name"}'
 
 # 2. Open the session UI in your browser
-#    → https://competitive-programming.connectaiml.com/session/{session_id}/interview
+#    → https://math-olympiad.connectaiml.com/session/{session_id}/interview
 ```
 
 The session UI is a single-page voice interface — Alistair teaches, Imogen examines, you speak your reasoning.
@@ -112,7 +113,43 @@ The session UI renders all mathematical notation using **KaTeX**. Problem statem
 The platform handles notation in two directions:
 
 - **Display (UI)** — KaTeX renders `$...$` after every dynamic content injection. Problem statements are auto-converted server-side (e.g. `n >= 8` → `$n \geq 8$`) before the page is served.
-- **Speech (TTS)** — LaTeX is stripped before passing text to Cartesia. `$n \geq 8$` becomes *"n greater than or equal to 8"* in audio. All templates instruct Claude to output LaTeX notation so display and speech paths are always in sync.
+- **Speech (TTS)** — LaTeX is stripped before passing text to Cartesia Sonic. `$n \geq 8$` becomes *"n greater than or equal to 8"* in audio via `_strip_latex()` — a ~40-line regex preprocessor that converts LaTeX notation to natural speech. All Claude templates output LaTeX notation so display and speech paths are always in sync.
+
+---
+
+## Voice Pipeline
+
+The voice pipeline uses **Cartesia Sonic** (TTS) and **Cartesia Ink** (STT), both built on state space models (SSMs).
+
+### Speech-to-Text (STT) — Ink
+
+Candidate voice answers are transcribed by Cartesia Ink (`ink-whisper`) with **word-level timestamps** enabled:
+
+```python
+response = await client.stt.transcribe(
+    model="ink-whisper",
+    file=audio_file,
+    language="en",
+    timestamp_granularities=["word"],
+)
+```
+
+The structured response (`{transcript, words, word_count, duration}`) drives quality gating:
+
+- **Word count** — answers with fewer than 8 words are treated as mic noise and return a soft nudge without affecting the session state
+- **Duration** — audio under 1.0 second triggers a short-recording guard
+- **Transcript length** — answers over 4000 characters are rejected to prevent token overflow
+
+This replaces our earlier heuristic approach of gating on `len(audio_bytes)` and `len(transcript.split())`, giving us structured signal from the model instead of string-splitting guesswork.
+
+### Text-to-Speech (TTS) — Sonic
+
+Interviewer speech is generated by Cartesia Sonic with dual voice personas:
+
+- **Alistair** (tutor) — Cartesia voice: Oliver
+- **Imogen** (examiner) — Cartesia voice: Evie
+
+Voice switching happens per-agent based on FSM state. LaTeX is normalised to natural speech via `_strip_latex()` before every TTS call.
 
 ---
 
@@ -122,55 +159,24 @@ A user can open claude.ai and type *"quiz me on Bézout's identity."* Claude wil
 
 The test is simple: can someone replicate the core value by opening Claude in one tab and Cartesia's playground in another? The answer is no — because the cross-turn state tracking, multi-agent orchestration, live scoring, and proof gating are doing real work that neither tool provides alone. The product is the orchestration layer, not the API calls.
 
-### What Claude UI cannot do
-
-| Capability | Claude UI | Competitive Programming Factory |
-|------------|-----------|----------------------------------|
-| **Stateful answer accumulation across utterances** | Each message is evaluated in isolation — partial progress is discarded | Redis hot cache tracks demonstrated concepts across turns using set-union. A candidate who covers 2 concepts in turn 1 and 3 more in turn 2 passes — they never repeat themselves |
-| **Multi-agent coordination with handover protocol** | One persona per conversation. Switching requires the user to re-prompt | Two agents (Alistair and Imogen) with distinct system prompts, distinct Cartesia voices, and an orchestrator that routes between them based on FSM state, concept coverage, and silence duration |
-| **Real-time structured scoring with live progress** | Claude can grade after the fact but can't show "3/5 concepts covered" updating live | The evaluator reads from Redis Sets in real-time and returns per-concept verdicts (CONFIRMED / PARTIAL / MISSING) after every turn |
-| **Proof gating and Vision scoring** | Cannot require a written proof before accepting an answer, cannot score a proof against a rubric | The proof panel gates Imogen's verdict on provable concepts. Claude Vision scores uploads against the curriculum rubric item-by-item |
-| **Always-on written work upload** | No persistent upload panel across turns | Proof panel is visible at every stage — candidates upload written work at any point, oral and written answers assessed together |
-| **LaTeX rendering + TTS normalisation** | No separation between display and speech notation | KaTeX renders `$...$` in the UI; `_strip_latex` converts LaTeX to natural speech before Cartesia TTS |
-| **Semantic turn boundaries** | Waits for the user to hit send | Streaming SSM-based STT processes audio continuously. The system determines when a turn ends based on linguistic context, not just silence duration |
-| **Session history with backtracking** | Flat message list — no structured traversal | A doubly linked list tracks every stage and turn. The candidate can return to Alistair mid-session; Imogen resumes from where she left off |
+| Capability | Claude UI | Mathematical Olympiad Factory |
+|------------|-----------|-------------------------------|
+| **Stateful answer accumulation** | Each message evaluated in isolation | Redis tracks demonstrated concepts across turns via set-union |
+| **Multi-agent coordination** | One persona per conversation | Two agents with distinct voices, orchestrated by FSM state |
+| **Real-time structured scoring** | Can grade after the fact | Per-concept verdicts (CONFIRMED / PARTIAL / MISSING) after every turn |
+| **Proof gating + Vision scoring** | Cannot gate on written proof | Claude Vision scores uploads against curriculum rubric |
+| **LaTeX rendering + TTS normalisation** | No display/speech separation | KaTeX for display; `_strip_latex()` for speech |
+| **Session history with backtracking** | Flat message list | DLL with O(1) append and backward traversal |
 
 ### The CS concepts powering the system
 
-**Finite State Machine (FSM)** — Every session is a state machine with defined states (`TEACH → TEACH_CHECK → EXAMINE → EVALUATE`) and guarded transitions. The FSM enforces the session protocol: Alistair cannot hand off to Imogen until the comprehension check passes. Imogen cannot advance a stage until the concept bar is met.
+**Finite State Machine (FSM)** — Every session is a state machine with defined states and guarded transitions. The FSM enforces the session protocol: Alistair cannot hand off to Imogen until the comprehension check passes.
 
-**Doubly Linked List (DLL)** — Session history is a DLL where each node is a stage containing an ordered list of turns. O(1) append at the tail for new turns. The `prev` pointer enables backtracking — when a candidate returns to Alistair, the DLL navigates backward without losing Imogen's position.
+**Doubly Linked List (DLL)** — Session history is a DLL where each node is a stage containing an ordered list of turns. The `prev` pointer enables backtracking without losing Imogen's position.
 
-**Monotonic Accumulation over a Join-Semilattice** — The formal model for how partial answers accumulate across turns:
+**Monotonic Accumulation over a Join-Semilattice** — Partial answers accumulate across turns. Redis `SADD` implements the join — idempotent and commutative. The evaluator reads `SMEMBERS` (the union of all turns), not the last turn in isolation.
 
-```
-Let C = {c₁, c₂, ... cₙ}  — required concepts for a stage
-Let Sₜ ⊆ C                 — concepts demonstrated at turn t
-
-Progress after t turns: S₁ ∪ S₂ ∪ ... ∪ Sₜ
-Monotone property:      demonstrated concepts never decrease
-PASS condition:         ∪Sₜ = C
-```
-
-**State Space Models (SSMs)** — The voice pipeline runs on Cartesia's Ink (STT) and Sonic (TTS), both built on state space models. SSMs compress audio into a fixed-size hidden state that evolves per chunk in O(n) with constant memory, enabling true streaming transcription.
-
-**Multi-Agent Orchestration** — The orchestrator routes between agents based on shared state:
-
-```
-┌──────────────────────────┐
-│      Redis Hot Cache      │
-│  concepts: {A, B, C}     │
-│  silence_duration: 3s    │
-│  turn_count: 4           │
-└───────┬──────────┬───────┘
-        │          │
-   ┌────▼────┐ ┌───▼──────┐
-   │ALISTAIR │ │  IMOGEN  │
-   │  Tutor  │ │ Examiner │
-   │ Oliver  │ │  Evie    │
-   │Voice 01 │ │ Voice 02 │
-   └─────────┘ └──────────┘
-```
+**State Space Models (SSMs)** — Cartesia's Ink and Sonic compress audio into a fixed-size hidden state that evolves per chunk in O(n) with constant memory, enabling true streaming.
 
 ---
 
@@ -180,28 +186,26 @@ PASS condition:         ∪Sₜ = C
 
 ```bash
 # 1. Create a session
-curl -X POST https://competitive-programming.connectaiml.com/sessions \
+curl -X POST https://math-olympiad.connectaiml.com/sessions \
   -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"problem_statement": "Prove Theorem 2: every n >= 8 is expressible as 3a + 5b", "candidate_name": "Your Name"}'
 
-# Response includes session_id, e.g. "a3f7c2d1"
-
 # 2. Open the session UI
-#    https://competitive-programming.connectaiml.com/session/a3f7c2d1/interview
+#    https://math-olympiad.connectaiml.com/session/{session_id}/interview
 ```
 
-API explorer: **[competitive-programming.connectaiml.com/docs](https://competitive-programming.connectaiml.com/docs)**
+API explorer: **[math-olympiad.connectaiml.com/docs](https://math-olympiad.connectaiml.com/docs)**
 
 ### Run locally
 
 ```bash
-# 1. Install UV (skip if already installed)
+# 1. Install UV
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 2. Clone and install
-git clone git@github.com:martinhewing/competitive-programming-factory.git
-cd competitive-programming-factory
+git clone git@github.com:martinhewing/mathematical-olympiad-factory.git
+cd mathematical-olympiad-factory
 uv sync
 
 # 3. Configure — three keys required
@@ -227,39 +231,30 @@ All configuration lives in `.env`. Three keys are required; everything else has 
 | `ANTHROPIC_API_KEY` | Yes | Claude API key from console.anthropic.com |
 | `CARTESIA_API_KEY` | Yes | Cartesia key from play.cartesia.ai (TTS + STT) |
 | `FACTORY_API_KEY` | Yes | Your API key — generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `CP_DB_DSN` | Yes (prod) | PostgreSQL DSN — `postgresql://cp_user:password@localhost:5432/competitive_programming` |
+| `CP_DB_DSN` | Yes (prod) | PostgreSQL DSN |
 | `REDIS_URL` | No | Default: `redis://localhost:6379/1` |
 | `ANTHROPIC_MODEL` | No | Default: `claude-sonnet-4-20250514` |
 | `PROBE_LIMIT` | No | Max follow-up probes per stage (default: 3) |
 | `MAX_STAGE_N` | No | Max stages per session (default: 20) |
-| `RATE_LIMIT_SESSIONS_PER_HOUR` | No | Per-key rate limit for session creation (default: 20) |
-| `RATE_LIMIT_SUBMITS_PER_HOUR` | No | Per-key rate limit for answer submissions (default: 100) |
 
-See `.env.example` for the full reference including CORS, logging, and Digital Ocean Spaces storage.
+See `.env.example` for the full reference.
 
 ---
 
 ## API Reference
 
-The API is fully documented in the interactive Scalar explorer at [competitive-programming.connectaiml.com/docs](https://competitive-programming.connectaiml.com/docs).
+Full interactive documentation at [math-olympiad.connectaiml.com/docs](https://math-olympiad.connectaiml.com/docs).
 
 ```
-POST   /sessions                                  → Create session, get session_id
-GET    /session/{id}/stage/1                       → Load first stage (teach phase)
-POST   /session/{id}/stage/1/voice                 → Submit voice answer + optional proof scan
-POST   /session/{id}/stage/1/submit                → Submit text answer (alternative)
+POST   /sessions                                  → Create session
+GET    /session/{id}/stage/1                       → Load first stage
+POST   /session/{id}/stage/1/voice                 → Submit voice answer + optional proof
+POST   /session/{id}/stage/1/submit                → Submit text answer
 GET    /session/{id}/state                         → Poll FSM state
 GET    /session/{id}/evaluate                      → Final debrief
-
-GET    /session/{id}/interview                     → Full candidate-facing UI
-GET    /session/{id}/stage/{n}/audio/file           → Download stage audio (WAV)
-
-GET    /session/{id}/fsm-visualize                 → FSM state diagram (SVG)
-GET    /session/{id}/dll-visualize                 → Session journey diagram (SVG)
-GET    /session/{id}/fsm-mermaid                   → FSM as Mermaid markup
-
+GET    /session/{id}/interview                     → Candidate-facing UI
+GET    /session/{id}/stage/{n}/audio/file           → Download stage audio
 POST   /diagrams/pregenerate                       → Warm all 8 reference diagrams
-POST   /concept/{slug}/diagram/invalidate          → Force-regenerate a single diagram
 ```
 
 All endpoints except `/docs` and the session UI require the `X-API-Key` header.
@@ -268,10 +263,10 @@ All endpoints except `/docs` and the session UI require the `X-API-Key` header.
 
 ## Curriculum
 
-The curriculum is hard-coded from *First Step to Mathematical Olympiad Problems* (Holton, Chapter 1) and covers 8 concepts, always taught in full, in order. Unlike the SD instance there is no problem-specific concept filtering — the linear progression from framework to Frobenius is the product.
+Hard-coded from *First Step to Mathematical Olympiad Problems* (Holton, Chapter 1). Eight concepts, always taught in full, in order.
 
-| # | Concept | Proof / Sketch |
-|---|---------|:--------------:|
+| # | Concept | Proof |
+|---|---------|:-----:|
 | 1 | The Problem-Solving Framework | |
 | 2 | The Jug Problem: Exploration and Efficiency | |
 | 3 | Bézout's Identity and Integer Linear Combinations | ✓ |
@@ -281,17 +276,7 @@ The curriculum is hard-coded from *First Step to Mathematical Olympiad Problems*
 | 7 | Generalising the Threshold: 3¢ and s¢ Stamps | ✓ |
 | 8 | The Frobenius Coin Problem: General Coprime Case | ✓ |
 
-The six provable concepts activate the proof panel with a required rubric. The proof panel is also available in optional mode at all other stages.
-
-### Warming the diagram cache
-
-```bash
-# Pre-generate all 8 diagrams at startup
-curl -X POST -H "X-API-Key: $FACTORY_API_KEY" https://competitive-programming.connectaiml.com/diagrams/pregenerate
-
-# Force-regenerate one diagram after a curriculum change
-curl -X POST -H "X-API-Key: $FACTORY_API_KEY" https://competitive-programming.connectaiml.com/concept/bezout_identity/diagram/invalidate
-```
+The six provable concepts activate the proof panel with a required rubric.
 
 ---
 
@@ -322,16 +307,37 @@ curl -X POST -H "X-API-Key: $FACTORY_API_KEY" https://competitive-programming.co
 | Layer | Tool |
 |-------|------|
 | API | FastAPI + Scalar |
-| AI | Anthropic Claude (Sonnet) — reasoning, assessment, concept extraction |
-| TTS | Cartesia Sonic — SSM-based speech synthesis, dual voice personas (Alistair/Oliver + Imogen/Evie) |
-| STT | Cartesia Ink (ink-whisper) — SSM-based streaming transcription |
+| AI | Anthropic Claude (Sonnet) |
+| TTS | Cartesia Sonic — dual voice personas (Alistair/Oliver + Imogen/Evie) |
+| STT | Cartesia Ink — word-level timestamps for quality gating |
 | Vision | Claude Vision — proof scoring against curriculum rubric |
-| Math rendering | KaTeX — LaTeX rendered in UI; stripped to natural speech before TTS |
-| State | FSM (session protocol) + DLL (turn history) + Redis Sets (concept accumulator) |
-| Storage | PostgreSQL (DB: competitive_programming) + Redis (DB: 1) + Digital Ocean Spaces |
+| Math | KaTeX (display) + `_strip_latex()` (speech normalisation) |
+| State | FSM + DLL + Redis Sets (concept accumulator) |
+| Storage | PostgreSQL + Redis + Digital Ocean Spaces |
 | Build | UV + Docker |
 | CI/CD | GitHub Actions |
-| Host | Digital Ocean VPS (port 8395) |
+| Host | Digital Ocean VPS |
+
+---
+
+## Open Source Contributions
+
+Building this platform exposed friction in the voice AI ecosystem. We document and upstream those findings as part of a structured open source contribution programme.
+
+**Contribution design documents:** [oss.connectaiml.com](https://oss.connectaiml.com)
+
+Current proposals:
+
+| ID | Target | Status | Summary |
+|----|--------|--------|---------|
+| CSP-001 | [cartesia-ai/cartesia-python](https://github.com/cartesia-ai/cartesia-python) | Drafted | Text preprocessing hook for TTS — our `_strip_latex()` as evidence |
+| CSP-002 | Internal | Shipped | Word-level timestamps from Ink STT for quality gating |
+| CSP-003 | [KoljaB/RealtimeSTT](https://github.com/KoljaB/RealtimeSTT) | Planned | Cartesia Ink engine implementation |
+| CSP-004 | [KoljaB/RealtimeTTS](https://github.com/KoljaB/RealtimeTTS) | Planned | Cartesia Sonic engine implementation |
+| CSP-005 | [snakers4/silero-vad](https://github.com/snakers4/silero-vad) | Candidate | Cartesia Ink + VAD integration example |
+| CSP-006 | [livekit/agents](https://github.com/livekit/agents) | Candidate | Multi-voice persona support in Cartesia plugin |
+
+Each proposal follows a fix-first-then-upstream pattern: identify friction → build a local workaround → adopt existing SDK features → file an issue or PR for the remaining gap with working code as evidence.
 
 ---
 
@@ -358,8 +364,8 @@ uv run ruff format .
 ### Docker
 
 ```bash
-docker build -t cp-factory .
-docker run -p 8395:8395 --env-file .env cp-factory
+docker build -t math-olympiad-factory .
+docker run -p 8395:8395 --env-file .env math-olympiad-factory
 ```
 
 ---
@@ -388,15 +394,15 @@ src/competitive_programming_factory/
 │   └── fsm/                        # Finite state machine + transitions
 ├── engine/
 │   ├── session_engine.py           # Coordinates FSM, DLL, and Claude
-│   ├── teach_spec.py               # CP linear curriculum selector (all 8 concepts always)
+│   ├── teach_spec.py               # Linear curriculum selector (all 8 concepts)
 │   └── prompt_renderer.py          # Jinja2 → Claude prompt pipeline
-├── middleware/                      # Auth, rate limiting, request logging
-├── models/                         # Pydantic schemas
 ├── routes/
-│   ├── voice.py                    # TTS (_latexify, _strip_latex), STT, interview UI
+│   ├── voice.py                    # TTS, STT, LaTeX normalisation, interview UI
 │   └── ...                         # sessions, stages, state, visualize, diagrams
-├── templates/                      # Jinja2 prompt templates (CP mathematical context)
-└── voice/                          # TTS (Cartesia Sonic) + STT (Cartesia Ink)
+├── templates/                      # Jinja2 prompt templates
+└── voice/
+    ├── tts.py                      # Cartesia Sonic — stream + generate modes
+    └── stt.py                      # Cartesia Ink — word timestamps + structured result
 ```
 
 ---
