@@ -43,7 +43,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title       = "Competitive Programming Factory",
+        title       = "Mathematical Olympiad Factory",
         version     = "0.1.0",
         description = (
             "Mathematical olympiad problem-solving tutor.\n\n"
