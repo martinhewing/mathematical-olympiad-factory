@@ -5,16 +5,16 @@ lines = open(path).readlines()
 start = None
 end = None
 for i, l in enumerate(lines):
-    if 'async def teach_ask' in l or 'def teach_ask' in l:
+    if "async def teach_ask" in l or "def teach_ask" in l:
         start = i
-    if start and i > start and l.startswith('@router'):
+    if start and i > start and l.startswith("@router"):
         end = i
         break
 
 if start is None:
     print("teach_ask not found")
 else:
-    print(f"Found teach_ask at lines {start+1}-{end}")
+    print(f"Found teach_ask at lines {start + 1}-{end}")
     new_func = '''async def teach_ask(session_id: str, audio: UploadFile = File(...)):
     """Candidate asks Alex a question during TEACH phase via voice."""
     from competitive_programming_factory.config import get_settings
@@ -67,6 +67,7 @@ else:
     print("Replaced function body")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

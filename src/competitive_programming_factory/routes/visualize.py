@@ -9,10 +9,10 @@ Text fallback returns JSON when Graphviz is unavailable.
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from competitive_programming_factory.engine import session_engine as engine
+import competitive_programming_factory.session_store as store
 from competitive_programming_factory.domain.conversation.visualization import DLLVisualizer
 from competitive_programming_factory.domain.fsm.visualization import FSMVisualizer
-import competitive_programming_factory.session_store as store
+from competitive_programming_factory.engine import session_engine as engine
 
 router = APIRouter(tags=["visualize"])
 
@@ -73,17 +73,17 @@ def fsm_mermaid(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     fsm, _ = result
     return {
-        "mermaid":       fsm.mermaid(),
+        "mermaid": fsm.mermaid(),
         "current_state": fsm.state.value,
-        "phase":         fsm.phase,
+        "phase": fsm.phase,
     }
 
 
 def _fsm_json_fallback(fsm) -> dict:
     return {
-        "current_state":      fsm.state.value,
-        "phase":              fsm.phase,
-        "valid_transitions":  [s.value for s in fsm.get_valid_transitions()],
+        "current_state": fsm.state.value,
+        "phase": fsm.phase,
+        "valid_transitions": [s.value for s in fsm.get_valid_transitions()],
         "recent_transitions": [
             {"from": t.from_state, "to": t.to_state, "trigger": t.trigger}
             for t in fsm.history[-10:]
@@ -95,15 +95,17 @@ def _fsm_json_fallback(fsm) -> dict:
 def _dll_json_fallback(dll) -> dict:
     stages = []
     for node in dll.iterate_oldest_first():
-        stages.append({
-            "stage_id":   node.stage_id,
-            "stage_type": node.stage_type,
-            "status":     node.status,
-            "turns":      node.turn_count,
-            "is_current": node == dll.current,
-        })
+        stages.append(
+            {
+                "stage_id": node.stage_id,
+                "stage_type": node.stage_type,
+                "status": node.status,
+                "turns": node.turn_count,
+                "is_current": node == dll.current,
+            }
+        )
     return {
-        "size":   dll.size,
+        "size": dll.size,
         "stages": stages,
-        "note":   "Graphviz not available — install graphviz system package for SVG output",
+        "note": "Graphviz not available — install graphviz system package for SVG output",
     }

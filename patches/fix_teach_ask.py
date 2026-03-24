@@ -21,7 +21,7 @@ if old in text:
 else:
     print("Not found — showing /voice fetch lines:")
     for i, l in enumerate(text.splitlines(), 1):
-        if '/voice' in l and 'fetch' in l:
-            for j in range(max(0,i-3), min(len(text.splitlines()), i+4)):
-                print(f"  {j+1}: {repr(text.splitlines()[j])}")
+        if "/voice" in l and "fetch" in l:
+            for j in range(max(0, i - 3), min(len(text.splitlines()), i + 4)):
+                print(f"  {j + 1}: {repr(text.splitlines()[j])}")
             break

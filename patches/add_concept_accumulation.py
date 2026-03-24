@@ -16,23 +16,23 @@ Pre-flight: copies originals to .bak files.
 Post-flight: syntax-checks every touched Python file.
 """
 
-import pathlib
-import sys
-import py_compile
-import tempfile
 import os
+import pathlib
+import py_compile
 import shutil
+import sys
+import tempfile
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-ROOT     = pathlib.Path(".")
-SRC      = ROOT / "src" / "competitive_programming_factory"
-ENGINE   = SRC / "engine" / "session_engine.py"
+ROOT = pathlib.Path(".")
+SRC = ROOT / "src" / "competitive_programming_factory"
+ENGINE = SRC / "engine" / "session_engine.py"
 TEMPLATE = SRC / "templates" / "assess_submission.j2"
 CONCEPT_STORE_DEST = SRC / "engine" / "concept_store.py"
 
 touched: list[pathlib.Path] = []
-errors:  list[str]          = []
+errors: list[str] = []
 
 
 def backup(path: pathlib.Path) -> None:
@@ -74,7 +74,13 @@ print("1. Installing engine/concept_store.py")
 print("═" * 60)
 
 # Look in patches/src/... first, then patches/ directly
-CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "src" / "competitive_programming_factory" / "engine" / "concept_store.py"
+CONCEPT_STORE_SRC = (
+    pathlib.Path(__file__).parent
+    / "src"
+    / "competitive_programming_factory"
+    / "engine"
+    / "concept_store.py"
+)
 if not CONCEPT_STORE_SRC.exists():
     CONCEPT_STORE_SRC = pathlib.Path(__file__).parent / "concept_store.py"
 
@@ -89,10 +95,7 @@ else:
         print(f"  ✓ concept_store.py already in place at {CONCEPT_STORE_DEST}")
         touched.append(CONCEPT_STORE_DEST)
     else:
-        msg = (
-            f"  ✗ concept_store.py not found.\n"
-            f"    Copy it manually to {CONCEPT_STORE_DEST}"
-        )
+        msg = f"  ✗ concept_store.py not found.\n    Copy it manually to {CONCEPT_STORE_DEST}"
         print(msg)
         errors.append(msg)
 

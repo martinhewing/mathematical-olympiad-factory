@@ -30,8 +30,8 @@ from competitive_programming_factory.routes import sessions, stages, state, visu
 async def lifespan(app: FastAPI):
     settings = get_settings()
     configure_logging(
-        log_level   = settings.log_level,
-        json_format = settings.json_logs,
+        log_level=settings.log_level,
+        json_format=settings.json_logs,
     )
     log = get_logger(__name__)
     log.info("factory.startup", model=settings.anthropic_model, debug=settings.debug)
@@ -43,9 +43,9 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title       = "Mathematical Olympiad Factory",
-        version     = "0.1.0",
-        description = (
+        title="Mathematical Olympiad Factory",
+        version="0.1.0",
+        description=(
             "Mathematical olympiad problem-solving tutor.\n\n"
             "## Quick start\n"
             "1. **Authenticate** — enter your `FACTORY_API_KEY` in the auth panel above\n"
@@ -58,10 +58,10 @@ def create_app() -> FastAPI:
             "The interviewer sets the scene. You ask clarifying questions. "
             "Claude assesses your answers and probes until concepts are confirmed."
         ),
-        lifespan    = lifespan,
-        docs_url    = None,
-        redoc_url   = None,
-        debug       = settings.debug,
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        debug=settings.debug,
     )
 
     # ── Middleware (registered last → runs first) ─────────────────────────
@@ -73,10 +73,10 @@ def create_app() -> FastAPI:
     if origins:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins     = origins,
-            allow_credentials = False,
-            allow_methods     = ["GET", "POST"],
-            allow_headers     = ["X-API-Key", "Content-Type"],
+            allow_origins=origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST"],
+            allow_headers=["X-API-Key", "Content-Type"],
         )
 
     # ── Routes ────────────────────────────────────────────────────────────
@@ -87,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(voice.router)
 
     from competitive_programming_factory.routes.diagrams import router as diagrams_router
+
     app.include_router(diagrams_router)
 
     # ── OpenAPI — declare X-API-Key security scheme ───────────────────────
@@ -94,15 +95,15 @@ def create_app() -> FastAPI:
         if app.openapi_schema:
             return app.openapi_schema
         schema = get_openapi(
-            title       = app.title,
-            version     = app.version,
-            description = app.description,
-            routes      = app.routes,
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
         )
         schema["components"]["securitySchemes"] = {
             "ApiKeyAuth": {
                 "type": "apiKey",
-                "in":   "header",
+                "in": "header",
                 "name": "X-API-Key",
             }
         }
@@ -132,13 +133,13 @@ def create_app() -> FastAPI:
     # ── Health (public) ───────────────────────────────────────────────────
     @app.get("/health", tags=["meta"])
     def health():
-        checks  = _run_health_checks()
+        checks = _run_health_checks()
         healthy = all(v for v in checks.values())
         return JSONResponse(
-            status_code = 200 if healthy else 503,
-            content     = {
+            status_code=200 if healthy else 503,
+            content={
                 "status": "ok" if healthy else "degraded",
-                **({}  if healthy else {"checks": checks}),
+                **({} if healthy else {"checks": checks}),
             },
         )
 
@@ -155,6 +156,7 @@ def _run_health_checks() -> dict[str, bool]:
 
     try:
         import competitive_programming_factory.session_store as store
+
         store.list_all()
         checks["session_store"] = True
     except Exception:

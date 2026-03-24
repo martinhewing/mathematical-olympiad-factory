@@ -183,8 +183,8 @@ else:
     print("✗ stage voice endpoint not found")
 
 # ── JS: bundle whiteboard images into FormData on submit ──────────
-old_js = '''  const form = new FormData();'''
-new_js = '''  // Attach any whiteboard images
+old_js = """  const form = new FormData();"""
+new_js = """  // Attach any whiteboard images
   const thumbImgs = document.querySelectorAll('.whiteboard-thumb img');
   const imageFiles = [];
   for (const img of thumbImgs) {{
@@ -193,7 +193,7 @@ new_js = '''  // Attach any whiteboard images
     imageFiles.push(new File([blob], 'diagram.png', {{type: blob.type}}));
   }}
   const form = new FormData();
-  imageFiles.forEach(f => form.append('images', f));'''
+  imageFiles.forEach(f => form.append('images', f));"""
 
 if old_js in text:
     text = text.replace(old_js, new_js)

@@ -23,31 +23,31 @@ from enum import Enum
 
 class State(Enum):
     # ── Lifecycle ────────────────────────────────────────────────────────
-    SESSION_START    = "Session Start"
+    SESSION_START = "Session Start"
     SESSION_COMPLETE = "Session Complete"
-    SESSION_ERROR    = "Session Error"
-    RESTART          = "Restart"
+    SESSION_ERROR = "Session Error"
+    RESTART = "Restart"
 
     # ── Per-concept teach phase ───────────────────────────────────────────
-    CONCEPT_TEACH       = "Concept Teach"         # Alex teaches concept N
-    CONCEPT_TEACH_CHECK = "Concept Teach Check"   # Alex comprehension check
+    CONCEPT_TEACH = "Concept Teach"  # Alex teaches concept N
+    CONCEPT_TEACH_CHECK = "Concept Teach Check"  # Alex comprehension check
 
     # ── Per-concept simulate phase ────────────────────────────────────────
-    CONCEPT_STAGE       = "Concept Stage"         # Jordan tests concept N
+    CONCEPT_STAGE = "Concept Stage"  # Jordan tests concept N
 
     # ── Evaluate phase ───────────────────────────────────────────────────
-    EVALUATE         = "Evaluate"
+    EVALUATE = "Evaluate"
 
     # ── Control ──────────────────────────────────────────────────────────
-    FLAGGED          = "Flagged"
+    FLAGGED = "Flagged"
 
     # ── Legacy states (old schema — do not use for new sessions) ─────────
-    TEACH            = "Teach"                    # legacy
-    TEACH_CHECK      = "Teach Comprehension Check"  # legacy
-    REQUIREMENTS     = "Requirements Gathering"   # legacy
-    SYSTEM_DESIGN    = "System Design"            # legacy
-    NODE_SESSION     = "Node Session"             # legacy
-    OOD_STAGE        = "OOD Stage"                # legacy
+    TEACH = "Teach"  # legacy
+    TEACH_CHECK = "Teach Comprehension Check"  # legacy
+    REQUIREMENTS = "Requirements Gathering"  # legacy
+    SYSTEM_DESIGN = "System Design"  # legacy
+    NODE_SESSION = "Node Session"  # legacy
+    OOD_STAGE = "OOD Stage"  # legacy
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -101,8 +101,13 @@ class State(Enum):
     def phase(self) -> str:
         if self in {State.CONCEPT_TEACH, State.CONCEPT_TEACH_CHECK, State.TEACH, State.TEACH_CHECK}:
             return "teach"
-        if self in {State.CONCEPT_STAGE, State.REQUIREMENTS, State.SYSTEM_DESIGN,
-                    State.NODE_SESSION, State.OOD_STAGE}:
+        if self in {
+            State.CONCEPT_STAGE,
+            State.REQUIREMENTS,
+            State.SYSTEM_DESIGN,
+            State.NODE_SESSION,
+            State.OOD_STAGE,
+        }:
             return "simulate"
         if self == State.EVALUATE:
             return "evaluate"
@@ -113,8 +118,14 @@ class State(Enum):
         """Which agent owns this state."""
         if self.is_teach_phase:
             return "alistair"
-        if self in {State.CONCEPT_STAGE, State.REQUIREMENTS, State.SYSTEM_DESIGN,
-                    State.NODE_SESSION, State.OOD_STAGE, State.EVALUATE}:
+        if self in {
+            State.CONCEPT_STAGE,
+            State.REQUIREMENTS,
+            State.SYSTEM_DESIGN,
+            State.NODE_SESSION,
+            State.OOD_STAGE,
+            State.EVALUATE,
+        }:
             return "imogen"
         return "system"
 
@@ -130,67 +141,60 @@ class State(Enum):
 
 
 _STATE_DESCRIPTIONS: dict[State, str] = {
-    State.SESSION_START:        "Session initialising.",
-    State.CONCEPT_TEACH:        "Alex is teaching concept N — explanation, analogy, example.",
-    State.CONCEPT_TEACH_CHECK:  "Alex is running the comprehension check for concept N.",
-    State.CONCEPT_STAGE:        "Jordan is testing concept N — opening question + probes.",
-    State.EVALUATE:             "Jordan delivers the full session debrief.",
-    State.FLAGGED:              "Probe limit reached — concept flagged, advancing.",
-    State.SESSION_COMPLETE:     "Session complete.",
-    State.SESSION_ERROR:        "Unrecoverable error.",
-    State.RESTART:              "Session restarting.",
+    State.SESSION_START: "Session initialising.",
+    State.CONCEPT_TEACH: "Alex is teaching concept N — explanation, analogy, example.",
+    State.CONCEPT_TEACH_CHECK: "Alex is running the comprehension check for concept N.",
+    State.CONCEPT_STAGE: "Jordan is testing concept N — opening question + probes.",
+    State.EVALUATE: "Jordan delivers the full session debrief.",
+    State.FLAGGED: "Probe limit reached — concept flagged, advancing.",
+    State.SESSION_COMPLETE: "Session complete.",
+    State.SESSION_ERROR: "Unrecoverable error.",
+    State.RESTART: "Session restarting.",
     # legacy
-    State.TEACH:            "Legacy: monolithic teach phase.",
-    State.TEACH_CHECK:      "Legacy: monolithic teach comprehension check.",
-    State.REQUIREMENTS:     "Legacy: requirements gathering.",
-    State.SYSTEM_DESIGN:    "Legacy: system design.",
-    State.NODE_SESSION:     "Legacy: node session.",
-    State.OOD_STAGE:        "Legacy: OOD stage.",
+    State.TEACH: "Legacy: monolithic teach phase.",
+    State.TEACH_CHECK: "Legacy: monolithic teach comprehension check.",
+    State.REQUIREMENTS: "Legacy: requirements gathering.",
+    State.SYSTEM_DESIGN: "Legacy: system design.",
+    State.NODE_SESSION: "Legacy: node session.",
+    State.OOD_STAGE: "Legacy: OOD stage.",
 }
 
 
 # ── Transition table ──────────────────────────────────────────────────────────
 
 VALID_TRANSITIONS: dict[State, set[State]] = {
-
     State.SESSION_START: {State.CONCEPT_TEACH},
-
     # Per-concept teach loop
     State.CONCEPT_TEACH: {
         State.CONCEPT_TEACH_CHECK,
         State.CONCEPT_STAGE,  # allow skip via Ready for Interview button
     },
     State.CONCEPT_TEACH_CHECK: {
-        State.CONCEPT_STAGE,    # comprehension confirmed → hand to Jordan
-        State.CONCEPT_TEACH,    # comprehension partial → reteach
+        State.CONCEPT_STAGE,  # comprehension confirmed → hand to Jordan
+        State.CONCEPT_TEACH,  # comprehension partial → reteach
     },
-
     # Per-concept simulate
     State.CONCEPT_STAGE: {
-        State.CONCEPT_TEACH,    # concept confirmed → advance to next concept (Alex teaches it)
-        State.CONCEPT_STAGE,    # probe → same concept
-        State.FLAGGED,          # probe limit reached
-        State.EVALUATE,         # all concepts done
+        State.CONCEPT_TEACH,  # concept confirmed → advance to next concept (Alex teaches it)
+        State.CONCEPT_STAGE,  # probe → same concept
+        State.FLAGGED,  # probe limit reached
+        State.EVALUATE,  # all concepts done
     },
-
     State.FLAGGED: {
-        State.CONCEPT_TEACH,    # skip to next concept
-        State.EVALUATE,         # final concept was flagged
+        State.CONCEPT_TEACH,  # skip to next concept
+        State.EVALUATE,  # final concept was flagged
     },
-
     State.EVALUATE: {State.SESSION_COMPLETE, State.SESSION_START},
-
     State.SESSION_COMPLETE: set(),
-    State.SESSION_ERROR:    set(),
-    State.RESTART:          {State.SESSION_START},
-
+    State.SESSION_ERROR: set(),
+    State.RESTART: {State.SESSION_START},
     # ── Legacy transitions (preserved for old sessions) ───────────────────
-    State.TEACH:       {State.TEACH_CHECK},
+    State.TEACH: {State.TEACH_CHECK},
     State.TEACH_CHECK: {State.REQUIREMENTS, State.TEACH},
-    State.REQUIREMENTS:  {State.REQUIREMENTS, State.SYSTEM_DESIGN},
+    State.REQUIREMENTS: {State.REQUIREMENTS, State.SYSTEM_DESIGN},
     State.SYSTEM_DESIGN: {State.NODE_SESSION, State.REQUIREMENTS},
     State.NODE_SESSION: {State.OOD_STAGE, State.NODE_SESSION, State.EVALUATE},
-    State.OOD_STAGE:    {State.OOD_STAGE, State.NODE_SESSION, State.FLAGGED},
+    State.OOD_STAGE: {State.OOD_STAGE, State.NODE_SESSION, State.FLAGGED},
 }
 
 

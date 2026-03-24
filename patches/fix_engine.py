@@ -1,14 +1,14 @@
 path = "src/competitive_programming_factory/engine/session_engine.py"
 text = open(path).read()
 
-old = '''    store.save_field(session_id, "stage_specs",       {})
+old = """    store.save_field(session_id, "stage_specs",       {})
     store.save_field(session_id, "stage_assessments", {})
     store.save(session_id, fsm, dll)
 
     log.info(
-        "session.created",'''
+        "session.created","""
 
-new = '''    store.save_field(session_id, "stage_specs",       {})
+new = """    store.save_field(session_id, "stage_specs",       {})
     store.save_field(session_id, "stage_assessments", {})
 
     # Fix: add teach stage to dll so get_or_generate_stage works correctly
@@ -24,7 +24,7 @@ new = '''    store.save_field(session_id, "stage_specs",       {})
         log.warning("session.lesson_pregenerate_failed", session_id=session_id, error=str(e))
 
     log.info(
-        "session.created",'''
+        "session.created","""
 
 if old in text:
     open(path, "w").write(text.replace(old, new))

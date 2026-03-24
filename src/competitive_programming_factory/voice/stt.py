@@ -2,12 +2,16 @@
 competitive_programming_factory/voice/stt.py
 Cartesia STT — ink-whisper, audio bytes → transcript.
 """
+
 from __future__ import annotations
+
 import io
+import os
 import subprocess
 import tempfile
-import os
+
 from cartesia import AsyncCartesia
+
 from competitive_programming_factory.config import get_settings
 from competitive_programming_factory.logging import get_logger
 
@@ -23,12 +27,14 @@ def _to_wav(audio_bytes: bytes) -> bytes:
     try:
         subprocess.run(
             ["ffmpeg", "-y", "-i", in_path, "-ar", "16000", "-ac", "1", out_path],
-            check=True, capture_output=True,
+            check=True,
+            capture_output=True,
         )
         return open(out_path, "rb").read()
     finally:
         for p in (in_path, out_path):
-            if os.path.exists(p): os.unlink(p)
+            if os.path.exists(p):
+                os.unlink(p)
 
 
 async def transcribe(audio_bytes: bytes, content_type: str = "audio/webm") -> str:
@@ -38,20 +44,20 @@ async def transcribe(audio_bytes: bytes, content_type: str = "audio/webm") -> st
 
     log.info("stt.transcribe.start", bytes=len(audio_bytes))
 
-    wav_bytes  = _to_wav(audio_bytes)
+    wav_bytes = _to_wav(audio_bytes)
     audio_file = ("answer.wav", io.BytesIO(wav_bytes), "audio/wav")
 
     async with AsyncCartesia(api_key=settings.cartesia_api_key) as client:
         response = await client.stt.transcribe(
-            model = "ink-whisper",
-            file  = audio_file,
-            language = "en",
-            timestamp_granularities = ["word"],
+            model="ink-whisper",
+            file=audio_file,
+            language="en",
+            timestamp_granularities=["word"],
         )
 
     transcript = getattr(response, "text", None) or getattr(response, "transcript", None) or ""
-    words      = getattr(response, "words", None) or []
-    duration   = getattr(response, "duration", None)
+    words = getattr(response, "words", None) or []
+    duration = getattr(response, "duration", None)
 
     word_count = len(words) if words else len(transcript.split())
 

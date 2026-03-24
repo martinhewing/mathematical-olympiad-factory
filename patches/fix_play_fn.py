@@ -5,13 +5,18 @@ lines = open(path).readlines()
 start = None
 end = None
 for i, l in enumerate(lines):
-    if 'async function playStageAudio(n) {{' in l:
+    if "async function playStageAudio(n) {{" in l:
         start = i
-    if start and i > start + 2 and (l.strip().startswith('async function') or l.strip().startswith('function ')) and 'playStageAudio' not in l:
+    if (
+        start
+        and i > start + 2
+        and (l.strip().startswith("async function") or l.strip().startswith("function "))
+        and "playStageAudio" not in l
+    ):
         end = i
         break
 
-print(f"Found playStageAudio at lines {start+1}-{end}")
+print(f"Found playStageAudio at lines {start + 1}-{end}")
 
 new_fn = """async function playStageAudio(n) {{
   const dot      = document.getElementById('speaking-dot');
@@ -75,6 +80,7 @@ open(path, "w").writelines(new_lines)
 print("Replaced")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

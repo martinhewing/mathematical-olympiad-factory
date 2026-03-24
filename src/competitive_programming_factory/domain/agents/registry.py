@@ -11,17 +11,18 @@ Usage:
     voice_id = agent.voice_id(settings)
     system_prompt = agent.system_prompt(candidate_first_name)
 """
+
 from __future__ import annotations
 
 from enum import Enum
 
 from competitive_programming_factory.domain.agents.base import BaseAgent
-from competitive_programming_factory.domain.agents.tutor import TutorAgent
 from competitive_programming_factory.domain.agents.interviewer import InterviewerAgent
+from competitive_programming_factory.domain.agents.tutor import TutorAgent
 
 
 class AgentType(Enum):
-    TUTOR       = "tutor"
+    TUTOR = "tutor"
     INTERVIEWER = "interviewer"
 
 
@@ -36,7 +37,7 @@ _TUTOR_STATES = {
 }
 
 # Singletons — agents are stateless, reuse them
-_TUTOR       = TutorAgent()
+_TUTOR = TutorAgent()
 _INTERVIEWER = InterviewerAgent()
 
 

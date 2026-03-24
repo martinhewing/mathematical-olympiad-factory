@@ -18,15 +18,15 @@ Patches applied (10 total):
  10. routes/voice.py         — Jordan soft mic guard; audio cache key fix; autoplay fix; backToAlex UI
 """
 
+import os
 import pathlib
 import py_compile
 import sys
 import tempfile
-import os
 
 ROOT = pathlib.Path(".")
 
-changes  = []
+changes = []
 failures = []
 
 
@@ -73,7 +73,7 @@ print()
 CONFIG = SRC / "config.py"
 check(CONFIG)
 
-src      = CONFIG.read_text()
+src = CONFIG.read_text()
 original = src
 
 if "probe_limit: int = 10" in src:
@@ -97,7 +97,7 @@ else:
 MACHINE = SRC / "domain/fsm/machine.py"
 check(MACHINE)
 
-src      = MACHINE.read_text()
+src = MACHINE.read_text()
 original = src
 
 if "PROBE_LIMIT = 10" in src:
@@ -121,7 +121,7 @@ else:
 STATES = SRC / "domain/fsm/states.py"
 check(STATES)
 
-src      = STATES.read_text()
+src = STATES.read_text()
 original = src
 
 P3_OLD = "        State.CONCEPT_STAGE:      {State.CONCEPT_TEACH_CHECK},"
@@ -134,7 +134,9 @@ elif P3_OLD in src:
     src = src.replace(P3_OLD, P3_NEW, 1)
     STATES.write_text(src)
     compile_check(STATES, original)
-    changes.append("PATCH 3 — domain/fsm/states.py: CONCEPT_TEACH → CONCEPT_STAGE direct transition")
+    changes.append(
+        "PATCH 3 — domain/fsm/states.py: CONCEPT_TEACH → CONCEPT_STAGE direct transition"
+    )
     print("  OK    PATCH 3 — domain/fsm/states.py: CONCEPT_TEACH direct transition added")
 else:
     failures.append("PATCH 3 FAILED — CONCEPT_STAGE transition line not found in states.py")
@@ -148,7 +150,7 @@ else:
 SCHEMAS = SRC / "models/schemas.py"
 check(SCHEMAS)
 
-src      = SCHEMAS.read_text()
+src = SCHEMAS.read_text()
 original = src
 
 if "max_length=8000" in src:
@@ -172,19 +174,16 @@ else:
 RENDERER = SRC / "engine/prompt_renderer.py"
 check(RENDERER)
 
-src      = RENDERER.read_text()
+src = RENDERER.read_text()
 original = src
 
 # Sub-patch 5a: BadRequestError → clean 422
-P5A_OLD = (
-    "    except anthropic.BadRequestError as e:\n"
-    "        raise e\n"
-)
+P5A_OLD = "    except anthropic.BadRequestError as e:\n        raise e\n"
 P5A_NEW = (
     "    except anthropic.BadRequestError as e:\n"
     "        raise HTTPException(\n"
     "            status_code=422,\n"
-    "            detail=f\"Prompt renderer rejected by Claude API: {e}\",\n"
+    '            detail=f"Prompt renderer rejected by Claude API: {e}",\n'
     "        ) from e\n"
 )
 
@@ -200,27 +199,24 @@ else:
 # Sub-patch 5b: fix images content list so image blocks come before text
 P5B_OLD = (
     '            content = [{"type": "text", "text": prompt_text}]\n'
-    '            for img in images:\n'
+    "            for img in images:\n"
 )
-P5B_NEW = (
-    '            img_blocks = []\n'
-    '            for img in images:\n'
-)
+P5B_NEW = "            img_blocks = []\n            for img in images:\n"
 P5B_CLOSE_OLD = (
-    '                    })\n'
-    '            content.extend(img_blocks)\n'
+    "                    })\n"
+    "            content.extend(img_blocks)\n"
     '            content.append({"type": "text", "text": prompt_text})\n'
 )
 
 if "img_blocks" not in src and P5B_OLD in src:
     src = src.replace(P5B_OLD, P5B_NEW, 1)
-    if '            content.extend(img_blocks)' not in src:
+    if "            content.extend(img_blocks)" not in src:
         # Add the content assembly after the loop
         P5B_LOOP_END = '                    })\n            content = [{"type": "text", "text": prompt_text}]\n'
         if P5B_LOOP_END in src:
             src = src.replace(
                 P5B_LOOP_END,
-                '                    })\n'
+                "                    })\n"
                 '            content = img_blocks + [{"type": "text", "text": prompt_text}]\n',
                 1,
             )
@@ -239,7 +235,7 @@ else:
 TEACH_SPEC = SRC / "engine/teach_spec.py"
 check(TEACH_SPEC)
 
-src      = TEACH_SPEC.read_text()
+src = TEACH_SPEC.read_text()
 original = src
 
 applied_6 = False
@@ -277,33 +273,33 @@ if applied_6:
 ENGINE = SRC / "engine/session_engine.py"
 check(ENGINE)
 
-src      = ENGINE.read_text()
+src = ENGINE.read_text()
 original = src
 
 P7A_OLD = (
-    '    probe_history = [\n'
+    "    probe_history = [\n"
     '        t.get("content", "")\n'
-    '        for t in (dll.current.turns if dll.current else [])\n'
+    "        for t in (dll.current.turns if dll.current else [])\n"
     '        if t.get("turn_type") == "probe" and t.get("content")\n'
-    '    ]\n'
+    "    ]\n"
 )
 P7A_NEW = (
-    '    probe_history = [\n'
+    "    probe_history = [\n"
     '        t.get("content", "")\n'
-    '        for t in (dll.current.turns if dll.current else [])\n'
+    "        for t in (dll.current.turns if dll.current else [])\n"
     '        if t.get("turn_type") == "probe" and t.get("content")\n'
-    '    ]\n'
-    '\n'
-    '    # Build stateful conversation history for assess_submission.j2.\n'
-    '    # Required to continue thread after off-topic turns.\n'
-    '    # NOTE: assessment and teach turns are excluded — they inject raw JSON blobs\n'
-    '    # which break Claude\'s JSON output contract.\n'
-    '    conversation_history = [\n'
+    "    ]\n"
+    "\n"
+    "    # Build stateful conversation history for assess_submission.j2.\n"
+    "    # Required to continue thread after off-topic turns.\n"
+    "    # NOTE: assessment and teach turns are excluded — they inject raw JSON blobs\n"
+    "    # which break Claude's JSON output contract.\n"
+    "    conversation_history = [\n"
     '        {"speaker": t.get("speaker", ""), "content": t.get("content", "")}\n'
-    '        for t in (dll.current.turns if dll.current else [])\n'
+    "        for t in (dll.current.turns if dll.current else [])\n"
     '        if t.get("turn_type") in ("text_submission", "probe")\n'
     '        and t.get("content")\n'
-    '    ]'
+    "    ]"
 )
 
 P7B_OLD = '        "candidate_answer":      answer,\n'
@@ -327,14 +323,18 @@ else:
     if applied_7 and P7B_OLD in src:
         src = src.replace(P7B_OLD, P7B_NEW, 1)
     elif applied_7:
-        failures.append("PATCH 7b FAILED — candidate_answer key not found in render_and_call context")
+        failures.append(
+            "PATCH 7b FAILED — candidate_answer key not found in render_and_call context"
+        )
         print("  ✗     PATCH 7b FAILED — candidate_answer key not found")
         applied_7 = False
 
     if applied_7:
         ENGINE.write_text(src)
         compile_check(ENGINE, original)
-        changes.append("PATCH 7 — session_engine.py: conversation_history (text_submission + probe only)")
+        changes.append(
+            "PATCH 7 — session_engine.py: conversation_history (text_submission + probe only)"
+        )
         print("  OK    PATCH 7 — session_engine.py: conversation_history added")
 
 
@@ -380,7 +380,9 @@ if "CONVERSATION SO FAR" not in src:
         src = src.replace(P8A_OLD, P8A_NEW, 1)
         applied_8 += 1
     else:
-        failures.append("PATCH 8a FAILED — CANDIDATE'S ANSWER section not found in assess_submission.j2")
+        failures.append(
+            "PATCH 8a FAILED — CANDIDATE'S ANSWER section not found in assess_submission.j2"
+        )
         print("  ✗     PATCH 8a FAILED — CANDIDATE'S ANSWER section not found")
 else:
     print("  SKIP  PATCH 8a — CONVERSATION SO FAR already present")
@@ -410,7 +412,7 @@ if applied_8 > 0:
 STAGES = SRC / "routes/stages.py"
 check(STAGES)
 
-src      = STAGES.read_text()
+src = STAGES.read_text()
 original = src
 
 # Sub-patch 9a: Form max_length 4000 → 8000
@@ -426,25 +428,25 @@ else:
 
 # Sub-patch 9b: answer length guard
 P9B_OLD = (
-    '    if len(answer.strip()) < 10:\n'
+    "    if len(answer.strip()) < 10:\n"
     '        raise HTTPException(status_code=422, detail="Answer is too short (minimum 10 characters)")\n'
-    '    if not store.exists(session_id):\n'
+    "    if not store.exists(session_id):\n"
 )
 P9B_NEW = (
-    '    if len(answer.strip()) < 10:\n'
+    "    if len(answer.strip()) < 10:\n"
     '        raise HTTPException(status_code=422, detail="Answer is too short (minimum 10 characters)")\n'
-    '\n'
-    '    if len(answer.strip()) > 4000:\n'
-    '        raise HTTPException(\n'
-    '            status_code=422,\n'
-    '            detail=(\n'
+    "\n"
+    "    if len(answer.strip()) > 4000:\n"
+    "        raise HTTPException(\n"
+    "            status_code=422,\n"
+    "            detail=(\n"
     '                "Sorry, we can\'t process an answer that long. "\n'
     '                "Please keep your response to around 700 words — "\n'
     '                "that\'s roughly 4-5 minutes of speaking at a normal pace."\n'
-    '            ),\n'
-    '        )\n'
-    '\n'
-    '    if not store.exists(session_id):\n'
+    "            ),\n"
+    "        )\n"
+    "\n"
+    "    if not store.exists(session_id):\n"
 )
 
 if "we can't process an answer that long" not in src and P9B_OLD in src:
@@ -456,8 +458,8 @@ else:
 
 # Sub-patch 9c: teach_ask concept-scoped system prompt + already-covered guard
 P9C_OLD = (
-    '    system_prompt = (\n'
-    '        TutorAgent().system_prompt(first_name)\n'
+    "    system_prompt = (\n"
+    "        TutorAgent().system_prompt(first_name)\n"
     '        + f"\\n\\nSESSION CONTEXT:\\nProblem: {problem}\\n"\n'
     '        + f"Concepts being taught:\\n{concept_text}\\n\\n"\n'
     '        + "Respond naturally as Alex in 2-4 sentences. "\n'
@@ -465,22 +467,22 @@ P9C_OLD = (
     '        + "Do NOT reset or restart — always continue forward from where you left off. "\n'
     '        + "Do NOT repeat or re-summarise anything in the ALREADY SAID list above. "\n'
     '        + \'Return ONLY JSON: {"reply": "your response"}\'\n'
-    '    )\n'
+    "    )\n"
 )
 P9C_NEW = (
-    '    # ── Build \'already covered\' guard from Alex\'s prior turns ─────────\n'
-    '    alex_prior = [\n'
+    "    # ── Build 'already covered' guard from Alex's prior turns ─────────\n"
+    "    alex_prior = [\n"
     '        t["content"] for t in (dll.current.turns if dll.current else [])\n'
     '        if t.get("speaker") == "alex" and t.get("content")\n'
-    '    ]\n'
-    '    already_covered = (\n'
+    "    ]\n"
+    "    already_covered = (\n"
     '        "WHAT YOU HAVE ALREADY SAID (do NOT repeat any of this):\\n"\n'
     '        + "\\n".join(f"- {t[:120]}" for t in alex_prior)\n'
-    '        if alex_prior else\n'
+    "        if alex_prior else\n"
     '        "Nothing covered yet — this is your opening."\n'
-    '    )\n'
-    '\n'
-    '    # ── Extract the SINGLE concept in scope for this segment ──────────\n'
+    "    )\n"
+    "\n"
+    "    # ── Extract the SINGLE concept in scope for this segment ──────────\n"
     '    concept_name        = spec.get("stage_title") or spec.get("concept_id", "the current concept")\n'
     '    concept_explanation = spec.get("explanation", "")\n'
     '    concept_analogy     = spec.get("analogy", "")\n'
@@ -490,9 +492,9 @@ P9C_NEW = (
     '        concept_name        = c.get("name", concept_name)\n'
     '        concept_explanation = c.get("explanation", "")\n'
     '        concept_probe_warn  = c.get("probe_warning", "")\n'
-    '\n'
-    '    system_prompt = (\n'
-    '        TutorAgent().system_prompt(first_name)\n'
+    "\n"
+    "    system_prompt = (\n"
+    "        TutorAgent().system_prompt(first_name)\n"
     '        + f"\\n\\n"\n'
     '        + "━━━ YOUR SCOPE THIS SEGMENT — HARD LIMIT ━━━\\n"\n'
     '        + f"You are teaching ONE concept and ONE concept only: **{concept_name}**.\\n"\n'
@@ -504,8 +506,8 @@ P9C_NEW = (
     '        + "RULES:\\n"\n'
     '        + f"- ONLY discuss {concept_name}. Nothing else.\\n"\n'
     '        + "- If the candidate asks about a different concept, redirect warmly: "\n'
-    '          f"\'Great question — we\'ll cover that in its own segment. "\n'
-    '          f"For now let\'s stay focused on {concept_name}.\'\\n"\n'
+    "          f\"'Great question — we'll cover that in its own segment. \"\n"
+    "          f\"For now let's stay focused on {concept_name}.'\\n\"\n"
     '        + "- Do NOT preview, hint at, or explain concepts from other segments.\\n"\n'
     '        + "- Do NOT expand the scope even if the candidate pushes you to.\\n"\n'
     '        + "\\n"\n'
@@ -513,14 +515,16 @@ P9C_NEW = (
     '        + "Respond in 2-4 sentences. "\n'
     '        + "Do NOT repeat anything in the ALREADY SAID list above. "\n'
     '        + \'Return ONLY JSON: {"reply": "your response"}\'\n'
-    '    )\n'
+    "    )\n"
 )
 
 if "YOUR SCOPE THIS SEGMENT" not in src:
     if P9C_OLD in src:
         src = src.replace(P9C_OLD, P9C_NEW, 1)
         print("  OK    PATCH 9c — stages.py: teach_ask concept-scoped system prompt")
-        changes.append("PATCH 9c — stages.py: teach_ask scoped to single concept + already-covered guard")
+        changes.append(
+            "PATCH 9c — stages.py: teach_ask scoped to single concept + already-covered guard"
+        )
     else:
         failures.append("PATCH 9c FAILED — teach_ask system_prompt block not found in stages.py")
         print("  ✗     PATCH 9c FAILED — system_prompt block not found")
@@ -540,14 +544,14 @@ P9D_NEW = (
     "    # ── 2. Short-circuit accidental/empty recordings ──────────────────────\n"
     "    if len(transcript.split()) < 8:\n"
     "        nudge = (\n"
-    "            \"Sorry, I didn't catch that — it sounded like the mic cut off. \"\n"
-    "            \"Take your time and ask when you're ready.\"\n"
+    '            "Sorry, I didn\'t catch that — it sounded like the mic cut off. "\n'
+    '            "Take your time and ask when you\'re ready."\n'
     "        )\n"
     "        return {\n"
-    "            \"verdict\": \"PARTIAL\", \"feedback\": nudge, \"probe\": nudge,\n"
-    "            \"transcript\": transcript, \"concepts_demonstrated\": [],\n"
-    "            \"concepts_missing\": [], \"next_url\": f\"/session/{session_id}/stage/1\",\n"
-    "            \"session_complete\": False,\n"
+    '            "verdict": "PARTIAL", "feedback": nudge, "probe": nudge,\n'
+    '            "transcript": transcript, "concepts_demonstrated": [],\n'
+    '            "concepts_missing": [], "next_url": f"/session/{session_id}/stage/1",\n'
+    '            "session_complete": False,\n'
     "        }\n"
     "\n"
     "    result = engine.load_session(session_id)\n"
@@ -559,7 +563,9 @@ if P9D_ANCHOR not in src:
         print("  OK    PATCH 9d — stages.py: teach_ask accidental mic guard")
         changes.append("PATCH 9d — stages.py: teach_ask mic guard (< 8 words)")
     else:
-        print("  SKIP  PATCH 9d — teach_ask mic guard anchor not found (may be structured differently)")
+        print(
+            "  SKIP  PATCH 9d — teach_ask mic guard anchor not found (may be structured differently)"
+        )
 else:
     print("  SKIP  PATCH 9d — mic guard already present in teach_ask")
 
@@ -574,7 +580,7 @@ compile_check(STAGES, original)
 VOICE = SRC / "routes/voice.py"
 check(VOICE)
 
-src      = VOICE.read_text()
+src = VOICE.read_text()
 original = src
 
 # Sub-patch 10a: Jordan hard 422 → soft mic guard
@@ -582,7 +588,7 @@ P10A_OLD = (
     "    if len(transcript.strip()) < 10:\n"
     "        raise HTTPException(\n"
     "            status_code=422,\n"
-    "            detail=\"We couldn't hear that clearly. Check your microphone is connected and try again — speak for at least 3 seconds.\",\n"
+    '            detail="We couldn\'t hear that clearly. Check your microphone is connected and try again — speak for at least 3 seconds.",\n'
     "        )\n"
 )
 P10A_NEW = (
@@ -590,19 +596,19 @@ P10A_NEW = (
     "    # touching the DLL so Jordan's conversation thread is unaffected.\n"
     "    if len(transcript.split()) < 8:\n"
     "        nudge = (\n"
-    "            \"Sorry, I didn't catch that — it sounded like the mic cut off. \"\n"
-    "            \"Take your time and answer when you're ready.\"\n"
+    '            "Sorry, I didn\'t catch that — it sounded like the mic cut off. "\n'
+    '            "Take your time and answer when you\'re ready."\n'
     "        )\n"
     "        return {\n"
-    "            \"verdict\":               \"PARTIAL\",\n"
-    "            \"feedback\":              nudge,\n"
-    "            \"probe\":                 nudge,\n"
-    "            \"transcript\":            transcript,\n"
-    "            \"concepts_demonstrated\": [],\n"
-    "            \"concepts_missing\":      [],\n"
-    "            \"next_url\":              f\"/session/{session_id}/stage/{stage_n}\",\n"
-    "            \"session_complete\":      False,\n"
-    "            \"input_mode\":            \"voice\",\n"
+    '            "verdict":               "PARTIAL",\n'
+    '            "feedback":              nudge,\n'
+    '            "probe":                 nudge,\n'
+    '            "transcript":            transcript,\n'
+    '            "concepts_demonstrated": [],\n'
+    '            "concepts_missing":      [],\n'
+    '            "next_url":              f"/session/{session_id}/stage/{stage_n}",\n'
+    '            "session_complete":      False,\n'
+    '            "input_mode":            "voice",\n'
     "        }\n"
 )
 
@@ -620,18 +626,18 @@ else:
 # Sub-patch 10b: long transcript guard
 P10B_OLD = "    if len(transcript.strip()) > 4000:\n"
 if P10B_OLD not in src:
-    P10B_ANCHOR = "            \"input_mode\":            \"voice\",\n        }\n\n"
+    P10B_ANCHOR = '            "input_mode":            "voice",\n        }\n\n'
     if P10B_ANCHOR in src:
         P10B_INSERT = (
-            "            \"input_mode\":            \"voice\",\n"
+            '            "input_mode":            "voice",\n'
             "        }\n"
             "\n"
             "    if len(transcript.strip()) > 4000:\n"
             "        raise HTTPException(\n"
             "            status_code=422,\n"
             "            detail=(\n"
-            "                \"That recording was too long to process. \"\n"
-            "                \"Please keep your answer to around 4-5 minutes and try again.\"\n"
+            '                "That recording was too long to process. "\n'
+            '                "Please keep your answer to around 4-5 minutes and try again."\n'
             "            ),\n"
             "        )\n"
             "\n"
@@ -645,9 +651,7 @@ else:
     print("  SKIP  PATCH 10b — long transcript guard already present")
 
 # Sub-patch 10c: audio cache key includes concept teach states
-P10C_OLD = (
-    '    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in {"Teach", "Teach Comprehension Check"}) else "interview"\n'
-)
+P10C_OLD = '    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in {"Teach", "Teach Comprehension Check"}) else "interview"\n'
 P10C_NEW = (
     '    _TEACH_VALS = {"Teach", "Teach Comprehension Check", "Concept Teach", "Concept Teach Check"}\n'
     '    _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in _TEACH_VALS) else "interview"\n'

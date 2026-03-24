@@ -12,14 +12,18 @@ The UI (patch C) already reads both fields from the assessment JSON.
 This patch makes Pydantic validate and serialise them correctly.
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 SCHEMAS = pathlib.Path("src/competitive_programming_factory/models/schemas.py")
 
 if not SCHEMAS.exists():
     sys.exit(f"ERROR: {SCHEMAS} not found. Run from repo root.")
 
-src      = SCHEMAS.read_text()
+src = SCHEMAS.read_text()
 original = src
 
 OLD = (

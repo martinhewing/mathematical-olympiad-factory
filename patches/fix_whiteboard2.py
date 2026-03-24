@@ -12,12 +12,14 @@ for i, l in enumerate(lines):
         assessment_line = i
     if '<audio id="stage-audio" style="display:none"></audio>' in l:
         audio_line = i
-    if '/* ── Right panel — candidate' in l:
+    if "/* ── Right panel — candidate" in l:
         css_right_panel = i
-    if 'function toggleAudioPlayback() {{' in l:
+    if "function toggleAudioPlayback() {{" in l:
         toggle_audio_fn = i
 
-print(f"assessment: {assessment_line+1}, audio: {audio_line+1}, css: {css_right_panel+1}, toggleAudio: {toggle_audio_fn+1}")
+print(
+    f"assessment: {assessment_line + 1}, audio: {audio_line + 1}, css: {css_right_panel + 1}, toggleAudio: {toggle_audio_fn + 1}"
+)
 
 # 1. Insert whiteboard HTML after assessment div (line assessment_line)
 whiteboard_html = """    <div class="whiteboard" id="whiteboard">
@@ -34,9 +36,9 @@ lines.insert(assessment_line + 1, whiteboard_html)
 for i, l in enumerate(lines):
     if '<audio id="stage-audio" style="display:none"></audio>' in l:
         audio_line = i
-    if '/* ── Right panel — candidate' in l:
+    if "/* ── Right panel — candidate" in l:
         css_right_panel = i
-    if 'function toggleAudioPlayback() {{' in l:
+    if "function toggleAudioPlayback() {{" in l:
         toggle_audio_fn = i
 
 # 2. Insert lightbox after audio element
@@ -48,9 +50,9 @@ lines.insert(audio_line + 1, lightbox_html)
 
 # Re-find after second insert
 for i, l in enumerate(lines):
-    if '/* ── Right panel — candidate' in l:
+    if "/* ── Right panel — candidate" in l:
         css_right_panel = i
-    if 'function toggleAudioPlayback() {{' in l:
+    if "function toggleAudioPlayback() {{" in l:
         toggle_audio_fn = i
 
 # 3. Insert CSS before right panel comment
@@ -105,7 +107,7 @@ lines.insert(css_right_panel, whiteboard_css)
 
 # Re-find toggle after third insert
 for i, l in enumerate(lines):
-    if 'function toggleAudioPlayback() {{' in l:
+    if "function toggleAudioPlayback() {{" in l:
         toggle_audio_fn = i
 
 # 4. Insert JS before toggleAudioPlayback
@@ -145,6 +147,7 @@ open(path, "w").writelines(lines)
 print("All insertions done")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

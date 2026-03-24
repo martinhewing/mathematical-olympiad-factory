@@ -19,6 +19,7 @@ else:
         print(f"  {i}: {repr(l)}")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

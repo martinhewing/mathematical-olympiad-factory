@@ -12,8 +12,11 @@ Personality:
 Phase ownership:  REQUIREMENTS → SYSTEM_DESIGN → NODE_SESSION → OOD_STAGE → EVALUATE
 Cartesia voice:   cartesia_voice_id  (the default interviewer voice)
 """
+
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 from competitive_programming_factory.domain.agents.base import BaseAgent
 
 if TYPE_CHECKING:
@@ -21,7 +24,6 @@ if TYPE_CHECKING:
 
 
 class InterviewerAgent(BaseAgent):
-
     @property
     def display_name(self) -> str:
         return "Imogen (Principal Engineer)"
@@ -30,7 +32,7 @@ class InterviewerAgent(BaseAgent):
     def role_label(self) -> str:
         return "INTERVIEWER"
 
-    def voice_id(self, settings: "Settings") -> str:
+    def voice_id(self, settings: Settings) -> str:
         return settings.cartesia_voice_id
 
     def system_prompt(self, candidate_first_name: str) -> str:

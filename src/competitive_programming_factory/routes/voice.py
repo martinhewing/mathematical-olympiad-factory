@@ -2,83 +2,91 @@
 competitive_programming_factory/routes/voice.py
 Voice endpoints — Cartesia TTS + STT.
 """
+
 from __future__ import annotations
+
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import Response, HTMLResponse
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse, Response
 
+import competitive_programming_factory.session_store as store
 from competitive_programming_factory.engine import session_engine as engine
 from competitive_programming_factory.logging import get_logger
-from competitive_programming_factory.voice.tts import generate_tts, audio_path
 from competitive_programming_factory.voice.stt import transcribe
-import competitive_programming_factory.session_store as store
+from competitive_programming_factory.voice.tts import audio_path, generate_tts
 
 router = APIRouter(tags=["voice"])
-log    = get_logger(__name__)
+log = get_logger(__name__)
 
 
 def _strip_latex(text: str) -> str:
     import re
-    text = re.sub(r'\$\$(.+?)\$\$', lambda m: _latex_to_speech(m.group(1)), text, flags=re.DOTALL)
-    text = re.sub(r'\$(.+?)\$',     lambda m: _latex_to_speech(m.group(1)), text)
+
+    text = re.sub(r"\$\$(.+?)\$\$", lambda m: _latex_to_speech(m.group(1)), text, flags=re.DOTALL)
+    text = re.sub(r"\$(.+?)\$", lambda m: _latex_to_speech(m.group(1)), text)
     return text
+
 
 def _latex_to_speech(expr: str) -> str:
     import re
+
     e = expr.strip()
-    e = e.replace('\\geq', 'greater than or equal to')
-    e = e.replace('\\leq', 'less than or equal to')
-    e = e.replace('\\neq', 'not equal to')
-    e = e.replace('\\gcd', 'gcd')
-    e = e.replace('\\times', 'times')
-    e = e.replace('\\cdot', 'times')
-    e = e.replace('\\in', 'in')
-    e = e.replace('\\mathbb{Z}', 'the integers')
-    e = e.replace('\\mathbb{N}', 'the natural numbers')
-    e = e.replace('\\forall', 'for all')
-    e = e.replace('\\exists', 'there exists')
-    e = e.replace('\\infty', 'infinity')
-    e = e.replace('\\to', 'to')
-    e = e.replace('\\rightarrow', 'implies')
-    e = e.replace('\\Rightarrow', 'implies')
-    e = e.replace('\\ldots', '...')
-    e = e.replace('\\', '')
-    e = re.sub(r'\^{?(\w+)}?', r' to the power \1', e)
-    e = re.sub(r'_{?(\w+)}?', r' subscript \1', e)
+    e = e.replace("\\geq", "greater than or equal to")
+    e = e.replace("\\leq", "less than or equal to")
+    e = e.replace("\\neq", "not equal to")
+    e = e.replace("\\gcd", "gcd")
+    e = e.replace("\\times", "times")
+    e = e.replace("\\cdot", "times")
+    e = e.replace("\\in", "in")
+    e = e.replace("\\mathbb{Z}", "the integers")
+    e = e.replace("\\mathbb{N}", "the natural numbers")
+    e = e.replace("\\forall", "for all")
+    e = e.replace("\\exists", "there exists")
+    e = e.replace("\\infty", "infinity")
+    e = e.replace("\\to", "to")
+    e = e.replace("\\rightarrow", "implies")
+    e = e.replace("\\Rightarrow", "implies")
+    e = e.replace("\\ldots", "...")
+    e = e.replace("\\", "")
+    e = re.sub(r"\^{?(\w+)}?", r" to the power \1", e)
+    e = re.sub(r"_{?(\w+)}?", r" subscript \1", e)
     return e.strip()
 
 
 def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
-    from competitive_programming_factory.domain.agents import get_agent_for_state
     from competitive_programming_factory.config import get_settings as _settings
-    spec       = engine.get_or_generate_stage(session_id, stage_n)
+    from competitive_programming_factory.domain.agents import get_agent_for_state
+
+    spec = engine.get_or_generate_stage(session_id, stage_n)
     state_data = engine.get_state(session_id) or {}
-    fsm_state  = state_data.get("fsm_state", "")
-    agent      = get_agent_for_state(fsm_state)
-    voice_id   = agent.voice_id(_settings())
+    fsm_state = state_data.get("fsm_state", "")
+    agent = get_agent_for_state(fsm_state)
+    voice_id = agent.voice_id(_settings())
     first_name = store.load_field(session_id, "candidate_first_name") or "there"
     _TEACH_STATES = {
-        "Teach", "Teach Comprehension Check",
-        "Concept Teach", "Concept Teach Check",
+        "Teach",
+        "Teach Comprehension Check",
+        "Concept Teach",
+        "Concept Teach Check",
     }
     _JORDAN_STATES = {"Concept Stage"}
     if fsm_state in _TEACH_STATES:
         greeting = spec.get("greeting", "")
-        check    = spec.get("comprehension_check", "")
+        check = spec.get("comprehension_check", "")
         if fsm_state in {"Concept Teach", "Concept Teach Check"}:
             parts = [p for p in [greeting] if p]
         else:
             parts = [p for p in [greeting, check] if p]
     elif fsm_state in _JORDAN_STATES:
         scene_hook = spec.get("scene_hook", "")
-        question   = spec.get("opening_question", "")
-        parts      = [p for p in [scene_hook, question] if p]
+        question = spec.get("opening_question", "")
+        parts = [p for p in [scene_hook, question] if p]
     else:
         scene_data = store.load_field(session_id, "scene") or {}
-        scene      = scene_data.get("scene", "")
-        question   = spec.get("opening_question", "")
-        parts      = [p for p in [scene, question] if p]
+        scene = scene_data.get("scene", "")
+        question = spec.get("opening_question", "")
+        parts = [p for p in [scene, question] if p]
     return (_strip_latex("  ".join(parts)), voice_id)
 
 
@@ -86,7 +94,6 @@ def _stage_text(session_id: str, stage_n: int) -> tuple[str, str]:
 async def get_stage_audio_file(session_id: str, stage_n: int):
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    import competitive_programming_factory.session_store as _store
     _fsm_result = engine.load_session(session_id)
     _TEACH_VALS = {"Teach", "Teach Comprehension Check", "Concept Teach", "Concept Teach Check"}
     _phase = "teach" if (_fsm_result and _fsm_result[0].state.value in _TEACH_VALS) else "interview"
@@ -95,9 +102,9 @@ async def get_stage_audio_file(session_id: str, stage_n: int):
         text, voice_id = _stage_text(session_id, stage_n)
         await generate_tts(text, save_path=savepath, voice_id=voice_id)
     return Response(
-        content    = Path(savepath).read_bytes(),
-        media_type = "audio/mpeg",
-        headers    = {"Content-Disposition": "inline"},
+        content=Path(savepath).read_bytes(),
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "inline"},
     )
 
 
@@ -173,34 +180,41 @@ async def speak_text(session_id: str, payload: dict):
     speak_text = _strip_latex(payload.get("text", "").strip())
     if not speak_text:
         raise HTTPException(status_code=422, detail="No text provided")
-    import tempfile, os
+    import os
+    import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
         req_voice = payload.get("voice_id", "")
         from competitive_programming_factory.config import get_settings as _settings
+
         cfg = _settings()
-        use_voice = cfg.cartesia_tutor_voice_id if req_voice == "ALISTAIR_VOICE" else cfg.cartesia_voice_id
+        use_voice = (
+            cfg.cartesia_tutor_voice_id if req_voice == "ALISTAIR_VOICE" else cfg.cartesia_voice_id
+        )
         await generate_tts(speak_text, save_path=tmp, voice_id=use_voice)
         audio = Path(tmp).read_bytes()
     finally:
-        if os.path.exists(tmp): os.unlink(tmp)
+        if os.path.exists(tmp):
+            os.unlink(tmp)
     return Response(
-        content    = audio,
-        media_type = "audio/mpeg",
-        headers    = {"Content-Disposition": "inline"},
+        content=audio,
+        media_type="audio/mpeg",
+        headers={"Content-Disposition": "inline"},
     )
+
 
 @router.post("/session/{session_id}/stage/{stage_n}/voice")
 async def submit_voice_answer(
     session_id: str,
-    stage_n:    int,
-    audio:      UploadFile = File(...),
-    images:     list[UploadFile] = File(default=[]),
+    stage_n: int,
+    audio: UploadFile = File(...),
+    images: list[UploadFile] = File(default=[]),
 ):
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    audio_bytes  = await audio.read()
+    audio_bytes = await audio.read()
     content_type = audio.content_type or "audio/mpeg"
     if len(audio_bytes) < 1000:
         raise HTTPException(status_code=422, detail="Audio too short")
@@ -210,43 +224,40 @@ async def submit_voice_answer(
     if isinstance(stt_result, dict):
         transcript = stt_result["transcript"]
         word_count = stt_result["word_count"]
-        duration   = stt_result.get("duration")
+        duration = stt_result.get("duration")
     else:
         # Fallback for plain string (shouldn't happen after patch)
         transcript = stt_result if isinstance(stt_result, str) else str(stt_result)
         word_count = len(transcript.split())
-        duration   = None
+        duration = None
     if word_count < 8:
         nudge = (
             "Sorry, I didn't catch that — it sounded like the mic cut off. "
             "Take your time and answer when you're ready."
         )
         return {
-            "verdict":               "PARTIAL",
-            "feedback":              nudge,
-            "probe":                 nudge,
-            "transcript":            transcript,
+            "verdict": "PARTIAL",
+            "feedback": nudge,
+            "probe": nudge,
+            "transcript": transcript,
             "concepts_demonstrated": [],
-            "concepts_missing":      [],
-            "next_url":              f"/session/{session_id}/stage/{stage_n}",
-            "session_complete":      False,
-            "input_mode":            "voice",
+            "concepts_missing": [],
+            "next_url": f"/session/{session_id}/stage/{stage_n}",
+            "session_complete": False,
+            "input_mode": "voice",
         }
     if duration and duration < 1.0:
-        nudge = (
-            "That was very short — make sure your microphone is working "
-            "and try again."
-        )
+        nudge = "That was very short — make sure your microphone is working and try again."
         return {
-            "verdict":               "PARTIAL",
-            "feedback":              nudge,
-            "probe":                 nudge,
-            "transcript":            transcript,
+            "verdict": "PARTIAL",
+            "feedback": nudge,
+            "probe": nudge,
+            "transcript": transcript,
             "concepts_demonstrated": [],
-            "concepts_missing":      [],
-            "next_url":              f"/session/{session_id}/stage/{stage_n}",
-            "session_complete":      False,
-            "input_mode":            "voice",
+            "concepts_missing": [],
+            "next_url": f"/session/{session_id}/stage/{stage_n}",
+            "session_complete": False,
+            "input_mode": "voice",
         }
 
     if len(transcript.strip()) > 4000:
@@ -262,15 +273,18 @@ async def submit_voice_answer(
         img_bytes = await img.read()
         if img_bytes:
             import base64
-            image_data.append({
-                "media_type": img.content_type or "image/png",
-                "data": base64.b64encode(img_bytes).decode(),
-            })
+
+            image_data.append(
+                {
+                    "media_type": img.content_type or "image/png",
+                    "data": base64.b64encode(img_bytes).decode(),
+                }
+            )
     assessment = engine.process_submission(
-        session_id = session_id,
-        stage_n    = stage_n,
-        answer     = transcript,
-        images     = image_data,
+        session_id=session_id,
+        stage_n=stage_n,
+        answer=transcript,
+        images=image_data,
     )
     if hasattr(assessment, "model_dump"):
         assessment = assessment.model_dump()
@@ -281,40 +295,52 @@ async def submit_voice_answer(
 async def interview_page(session_id: str):
     if not store.exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found")
-    state   = engine.get_state(session_id)
-    scene   = store.load_field(session_id, "scene") or {}
+    state = engine.get_state(session_id)
+    scene = store.load_field(session_id, "scene") or {}
     problem = store.load_field(session_id, "problem_statement") or ""
-    name    = store.load_field(session_id, "candidate_name") or "Candidate"
+    name = store.load_field(session_id, "candidate_name") or "Candidate"
     agent_name = state.get("agent_name", "Interviewer")
     agent_role = state.get("agent_role", "INTERVIEWER")
-    return HTMLResponse(content=_interview_html(
-        session_id = session_id,
-        problem    = _latexify(problem),
-        name       = name,
-        scene      = scene.get("scene", ""),
-        fsm_state  = state["fsm_state"],
-        phase      = state["phase"],
-        agent_name = agent_name,
-        agent_role = agent_role,
-    ))
+    return HTMLResponse(
+        content=_interview_html(
+            session_id=session_id,
+            problem=_latexify(problem),
+            name=name,
+            scene=scene.get("scene", ""),
+            fsm_state=state["fsm_state"],
+            phase=state["phase"],
+            agent_name=agent_name,
+            agent_role=agent_role,
+        )
+    )
 
 
 def _latexify(text: str) -> str:
     import re
-    if '$' in text:
+
+    if "$" in text:
         return text
     result = text
-    result = re.sub(r'([a-zA-Z0-9_]+)\s*>=\s*([a-zA-Z0-9_]+)', r'$\1 \\geq \2$', result)
-    result = re.sub(r'([a-zA-Z0-9_]+)\s*<=\s*([a-zA-Z0-9_]+)', r'$\1 \\leq \2$', result)
-    result = re.sub(r'([a-zA-Z0-9_]+)\s*!=\s*([a-zA-Z0-9_]+)', r'$\1 \\neq \2$', result)
-    result = re.sub(r'(\d+)([a-zA-Z])\s*\+\s*(\d+)([a-zA-Z])', r'$\1\2 + \3\4$', result)
-    result = re.sub(r'(\d+)([a-zA-Z])\s*-\s*(\d+)([a-zA-Z])', r'$\1\2 - \3\4$', result)
+    result = re.sub(r"([a-zA-Z0-9_]+)\s*>=\s*([a-zA-Z0-9_]+)", r"$\1 \\geq \2$", result)
+    result = re.sub(r"([a-zA-Z0-9_]+)\s*<=\s*([a-zA-Z0-9_]+)", r"$\1 \\leq \2$", result)
+    result = re.sub(r"([a-zA-Z0-9_]+)\s*!=\s*([a-zA-Z0-9_]+)", r"$\1 \\neq \2$", result)
+    result = re.sub(r"(\d+)([a-zA-Z])\s*\+\s*(\d+)([a-zA-Z])", r"$\1\2 + \3\4$", result)
+    result = re.sub(r"(\d+)([a-zA-Z])\s*-\s*(\d+)([a-zA-Z])", r"$\1\2 - \3\4$", result)
     return result
 
 
-def _interview_html(session_id, problem, name, scene, fsm_state, phase,
-                    agent_name="Interviewer", agent_role="INTERVIEWER") -> str:
+def _interview_html(
+    session_id,
+    problem,
+    name,
+    scene,
+    fsm_state,
+    phase,
+    agent_name="Interviewer",
+    agent_role="INTERVIEWER",
+) -> str:
     import json
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1065,7 +1091,7 @@ html, body {{
     <!-- Answer area — always vertically centred, grows to fill available space -->
     <div class="answer-area">
       <div class="waveform" id="waveform">
-        {''.join('<div class="wave-bar" id="wb' + str(i) + '"></div>' for i in range(24))}
+        {"".join('<div class="wave-bar" id="wb' + str(i) + '"></div>' for i in range(24))}
       </div>
       <button class="record-btn" id="record-btn" onclick="toggleRecording()" disabled>
         <div class="record-icon"></div>

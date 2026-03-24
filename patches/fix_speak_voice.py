@@ -1,16 +1,16 @@
 path = "src/competitive_programming_factory/routes/voice.py"
 text = open(path).read()
 
-old = '''    speak_text = payload.get("text", "").strip()
+old = """    speak_text = payload.get("text", "").strip()
     if not speak_text:
         raise HTTPException(status_code=422, detail="No text provided")
     import tempfile, os
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
-        await generate_tts(speak_text, save_path=tmp)'''
+        await generate_tts(speak_text, save_path=tmp)"""
 
-new = '''    speak_text = payload.get("text", "").strip()
+new = """    speak_text = payload.get("text", "").strip()
     if not speak_text:
         raise HTTPException(status_code=422, detail="No text provided")
     req_voice  = payload.get("voice_id", "")
@@ -23,7 +23,7 @@ new = '''    speak_text = payload.get("text", "").strip()
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
         tmp = f.name
     try:
-        await generate_tts(speak_text, save_path=tmp, voice_id=use_voice)'''
+        await generate_tts(speak_text, save_path=tmp, voice_id=use_voice)"""
 
 if old in text:
     open(path, "w").write(text.replace(old, new))

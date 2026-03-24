@@ -17,6 +17,7 @@ Run against either factory:
   cd connectionsphere-factory && python3 patch_stt_word_timestamps.py
   cd competitive-programming-factory && python3 patch_stt_word_timestamps.py
 """
+
 import pathlib
 import sys
 

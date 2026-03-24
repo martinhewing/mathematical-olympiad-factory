@@ -25,8 +25,8 @@ from competitive_programming_factory.domain.fsm.states import VALID_TRANSITIONS,
 
 class FSMTransitionError(Exception):
     def __init__(self, from_state: str, to_state: str, valid_transitions: set[str]) -> None:
-        self.from_state        = from_state
-        self.to_state          = to_state
+        self.from_state = from_state
+        self.to_state = to_state
         self.valid_transitions = valid_transitions
         super().__init__(
             f"Invalid transition: {from_state!r} -> {to_state!r}. "
@@ -46,22 +46,22 @@ class FactoryFSM:
 
     def __init__(
         self,
-        candidate_name:    str   = "",
-        candidate_id:      str   = "",
-        candidate_level:   str   = "senior",
-        problem_statement: str   = "",
-        problem_id:        str   = "",
-        initial_state:     State = State.SESSION_START,
+        candidate_name: str = "",
+        candidate_id: str = "",
+        candidate_level: str = "senior",
+        problem_statement: str = "",
+        problem_id: str = "",
+        initial_state: State = State.SESSION_START,
     ) -> None:
-        self._state:          State             = initial_state
-        self._context:        FSMContext        = FSMContext(
-            candidate_name    = candidate_name,
-            candidate_id      = candidate_id,
-            candidate_level   = candidate_level,
-            problem_statement = problem_statement,
-            problem_id        = problem_id,
+        self._state: State = initial_state
+        self._context: FSMContext = FSMContext(
+            candidate_name=candidate_name,
+            candidate_id=candidate_id,
+            candidate_level=candidate_level,
+            problem_statement=problem_statement,
+            problem_id=problem_id,
         )
-        self._history:        list[Transition]     = []
+        self._history: list[Transition] = []
         self._function_calls: list[dict[str, str]] = []
         self._turns_in_state: int = 0
 
@@ -126,17 +126,19 @@ class FactoryFSM:
     def transition_to(self, new_state: State, trigger: str | None = None) -> None:
         if not self.can_transition_to(new_state):
             raise FSMTransitionError(
-                from_state        = self._state.value,
-                to_state          = new_state.value,
-                valid_transitions = {s.value for s in self.get_valid_transitions()},
+                from_state=self._state.value,
+                to_state=new_state.value,
+                valid_transitions={s.value for s in self.get_valid_transitions()},
             )
 
-        self._history.append(Transition(
-            from_state = self._state.value,
-            to_state   = new_state.value,
-            timestamp  = datetime.now().isoformat(),
-            trigger    = trigger,
-        ))
+        self._history.append(
+            Transition(
+                from_state=self._state.value,
+                to_state=new_state.value,
+                timestamp=datetime.now().isoformat(),
+                trigger=trigger,
+            )
+        )
 
         now = datetime.now().isoformat()
 
@@ -146,9 +148,11 @@ class FactoryFSM:
             self._context.simulate_started_at = now
         if new_state == State.EVALUATE and self._context.evaluate_started_at == "":
             self._context.evaluate_started_at = now
-        if (new_state == State.CONCEPT_TEACH_CHECK
-                and self._state == State.CONCEPT_TEACH
-                and self._context.teach_completed_at == ""):
+        if (
+            new_state == State.CONCEPT_TEACH_CHECK
+            and self._state == State.CONCEPT_TEACH
+            and self._context.teach_completed_at == ""
+        ):
             self._context.teach_completed_at = now
 
         # Legacy architecture milestones (preserved)
@@ -158,8 +162,8 @@ class FactoryFSM:
             self._context.teach_completed_at = now
 
         self._context.current_phase = new_state.phase
-        self._state                 = new_state
-        self._turns_in_state        = 0
+        self._state = new_state
+        self._turns_in_state = 0
 
     def increment_turn(self) -> None:
         """
@@ -221,30 +225,30 @@ class FactoryFSM:
 
     def prompt_context(self) -> dict[str, Any]:
         ctx = {
-            "current_state":       self._state.value,
-            "state_description":   self._state.description,
-            "phase":               self.phase,
-            "agent":               self._state.agent,
-            "turns_in_state":      self._turns_in_state,
-            "probe_rounds":        self._context.probe_rounds,
-            "probe_limit":         PROBE_LIMIT,
+            "current_state": self._state.value,
+            "state_description": self._state.description,
+            "phase": self.phase,
+            "agent": self._state.agent,
+            "turns_in_state": self._turns_in_state,
+            "probe_rounds": self._context.probe_rounds,
+            "probe_limit": PROBE_LIMIT,
             "probe_limit_reached": self.probe_limit_reached,
-            "requires_voice":      self.requires_voice,
-            "valid_transitions":   [s.value for s in self.get_valid_transitions()],
-            "progress":            self._context.progress_summary,
-            "candidate_level":     self._context.candidate_level,
-            "problem_statement":   self._context.problem_statement,
-            "recent_history":      [t.to_dict() for t in self._history[-5:]],
-            "fsm_mermaid":         self.mermaid(),
+            "requires_voice": self.requires_voice,
+            "valid_transitions": [s.value for s in self.get_valid_transitions()],
+            "progress": self._context.progress_summary,
+            "candidate_level": self._context.candidate_level,
+            "problem_statement": self._context.problem_statement,
+            "recent_history": [t.to_dict() for t in self._history[-5:]],
+            "fsm_mermaid": self.mermaid(),
         }
         # Per-concept extras
         if self.is_concept_session:
-            ctx["concept_id"]          = self._context.current_concept_id
-            ctx["concept_index"]       = self._context.concept_index
-            ctx["concepts_total"]      = self._context.concepts_total
-            ctx["concepts_confirmed"]  = self._context.concepts_confirmed
-            ctx["concepts_flagged"]    = self._context.concepts_flagged
-            ctx["reteach_count"]       = self._context.reteach_count
+            ctx["concept_id"] = self._context.current_concept_id
+            ctx["concept_index"] = self._context.concept_index
+            ctx["concepts_total"] = self._context.concepts_total
+            ctx["concepts_confirmed"] = self._context.concepts_confirmed
+            ctx["concepts_flagged"] = self._context.concepts_flagged
+            ctx["reteach_count"] = self._context.reteach_count
         return ctx
 
     def mermaid(self) -> str:
@@ -253,10 +257,14 @@ class FactoryFSM:
         Current state marked ★, valid next states marked →.
         Legacy states omitted for new-architecture sessions to reduce noise.
         """
-        valid_next   = {s.name for s in self.get_valid_transitions()}
+        valid_next = {s.name for s in self.get_valid_transitions()}
         legacy_names = {
-            "TEACH", "TEACH_CHECK", "REQUIREMENTS",
-            "SYSTEM_DESIGN", "NODE_SESSION", "OOD_STAGE",
+            "TEACH",
+            "TEACH_CHECK",
+            "REQUIREMENTS",
+            "SYSTEM_DESIGN",
+            "NODE_SESSION",
+            "OOD_STAGE",
         }
 
         lines = ["stateDiagram-v2"]
@@ -271,7 +279,7 @@ class FactoryFSM:
                     continue
 
                 from_label = from_state.name
-                to_label   = to_state.name
+                to_label = to_state.name
 
                 if from_state == self._state:
                     from_label = f"{from_state.name} ★"
@@ -287,21 +295,23 @@ class FactoryFSM:
     # ── Function call logging ─────────────────────────────────────────────
 
     def log_function_call(self, function_name: str) -> None:
-        self._function_calls.append({
-            "function":  function_name,
-            "state":     self._state.value,
-            "timestamp": datetime.now().isoformat(),
-        })
-        self._function_calls        = self._function_calls[-5:]
+        self._function_calls.append(
+            {
+                "function": function_name,
+                "state": self._state.value,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+        self._function_calls = self._function_calls[-5:]
         self._context.function_path = [fc["function"] for fc in self._function_calls]
 
     # ── Serialisation ─────────────────────────────────────────────────────
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "state":          self._state.value,
-            "context":        self._context.to_dict(),
-            "history":        [t.to_dict() for t in self._history],
+            "state": self._state.value,
+            "context": self._context.to_dict(),
+            "history": [t.to_dict() for t in self._history],
             "function_calls": self._function_calls.copy(),
             "turns_in_state": self._turns_in_state,
         }
@@ -314,7 +324,7 @@ class FactoryFSM:
             State.SESSION_START,
         )
         fsm = cls(initial_state=state)
-        fsm._context        = FSMContext.from_dict(data.get("context", {}))
+        fsm._context = FSMContext.from_dict(data.get("context", {}))
         fsm._turns_in_state = data.get("turns_in_state", 0)
         for item in data.get("history", []):
             if isinstance(item, dict):
@@ -324,24 +334,26 @@ class FactoryFSM:
 
     def get_current_state_info(self) -> dict[str, Any]:
         return {
-            "current_state":       self._state.value,
-            "state_name":          self._state.name,
-            "phase":               self.phase,
-            "agent":               self._state.agent,
-            "is_terminal":         self._state.is_terminal,
-            "requires_voice":      self.requires_voice,
-            "description":         self._state.description,
-            "valid_transitions":   [s.value for s in self.get_valid_transitions()],
-            "turns_in_state":      self._turns_in_state,
-            "probe_rounds":        self._context.probe_rounds,
+            "current_state": self._state.value,
+            "state_name": self._state.name,
+            "phase": self.phase,
+            "agent": self._state.agent,
+            "is_terminal": self._state.is_terminal,
+            "requires_voice": self.requires_voice,
+            "description": self._state.description,
+            "valid_transitions": [s.value for s in self.get_valid_transitions()],
+            "turns_in_state": self._turns_in_state,
+            "probe_rounds": self._context.probe_rounds,
             "probe_limit_reached": self.probe_limit_reached,
-            "history_length":      len(self._history),
-            "recent_transitions":  [t.to_dict() for t in self._history[-3:]],
-            "context":             self._context.to_dict(),
+            "history_length": len(self._history),
+            "recent_transitions": [t.to_dict() for t in self._history[-3:]],
+            "context": self._context.to_dict(),
         }
 
     def __repr__(self) -> str:
-        concept = f", concept={self._context.current_concept_id!r}" if self.is_concept_session else ""
+        concept = (
+            f", concept={self._context.current_concept_id!r}" if self.is_concept_session else ""
+        )
         return (
             f"FactoryFSM("
             f"state={self._state.name!r}, "

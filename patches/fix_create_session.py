@@ -2,18 +2,24 @@
 fix_create_session.py
 Run from repo root: python3 fix_create_session.py
 """
-import pathlib, py_compile, sys, tempfile, os
+
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
-src = ENGINE.read_text(); original = src
+src = ENGINE.read_text()
+original = src
 
 OLD = '    fsm.transition_to(State.TEACH,        trigger="session_created")\n    node = dll.add_stage("requirements_001", "requirements")'
 
 NEW = (
-    '    # ── Per-concept architecture setup ──────────────────────────────\n'
-    '    from competitive_programming_factory.engine.teach_spec import select_concepts_for_problem\n'
-    '    _concepts = select_concepts_for_problem(problem_statement)\n'
-    '    fsm.context.concept_ids = [c.id for c in _concepts]\n'
+    "    # ── Per-concept architecture setup ──────────────────────────────\n"
+    "    from competitive_programming_factory.engine.teach_spec import select_concepts_for_problem\n"
+    "    _concepts = select_concepts_for_problem(problem_statement)\n"
+    "    fsm.context.concept_ids = [c.id for c in _concepts]\n"
     '    fsm.transition_to(State.CONCEPT_TEACH, trigger="session_created")\n'
     '    node = dll.add_stage("concept_teach_001", "concept_teach")'
 )
@@ -35,4 +41,5 @@ except py_compile.PyCompileError as e:
     print("Rolled back")
     sys.exit(1)
 finally:
-    if os.path.exists(tmp): os.unlink(tmp)
+    if os.path.exists(tmp):
+        os.unlink(tmp)

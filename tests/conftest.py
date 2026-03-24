@@ -7,6 +7,7 @@ Shared fixtures. Scoped correctly:
 """
 
 import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,6 +21,7 @@ _TEST_API_KEY = "test-key-do-not-use-in-production"
 
 # ── App / HTTP client ─────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="session", autouse=True)
 def set_test_env():
     os.environ["FACTORY_API_KEY"] = _TEST_API_KEY
@@ -29,9 +31,11 @@ def set_test_env():
 @pytest.fixture(scope="session")
 def app(set_test_env):
     from competitive_programming_factory.config import get_settings
+
     get_settings.cache_clear()
 
     from competitive_programming_factory.app import create_app
+
     return create_app()
 
 
@@ -42,6 +46,7 @@ def client(app):
 
 
 # ── Clean store between tests ─────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=True)
 def clear_store():
@@ -56,12 +61,13 @@ def clear_store():
 
 # ── Domain objects ────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def fsm():
     return FactoryFSM(
-        candidate_name    = "Test Candidate",
-        candidate_level   = "senior",
-        problem_statement = "Design a hotel reservation system",
+        candidate_name="Test Candidate",
+        candidate_level="senior",
+        problem_statement="Design a hotel reservation system",
     )
 
 
@@ -91,6 +97,7 @@ def fsm_at_ood(fsm):
 
 # ── Claude mock payloads ──────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def mock_scene():
     return {
@@ -99,10 +106,10 @@ def mock_scene():
             "Millions of guests book rooms each year. Your CEO wants a new reservation "
             "platform live within 18 months."
         ),
-        "primary_tension":      "availability vs consistency",
+        "primary_tension": "availability vs consistency",
         "deliberate_omissions": ["peak load", "overbooking policy", "cancellation rules"],
-        "strong_opening_move":  "Clarify whether search and booking are separate read/write flows",
-        "weak_signals":         ["jumps to database schema", "skips scale questions"],
+        "strong_opening_move": "Clarify whether search and booking are separate read/write flows",
+        "weak_signals": ["jumps to database schema", "skips scale questions"],
         "scale_clarifications": {"will_answer": [], "will_deflect": []},
     }
 
@@ -110,16 +117,16 @@ def mock_scene():
 @pytest.fixture
 def mock_stage_spec():
     return {
-        "stage_title":           "Requirements and Scale",
-        "opening_question":      "Walk me through how you would approach this problem.",
-        "minimum_bar":           "Must clarify scale and identify core entities.",
+        "stage_title": "Requirements and Scale",
+        "opening_question": "Walk me through how you would approach this problem.",
+        "minimum_bar": "Must clarify scale and identify core entities.",
         "strong_answer_signals": ["asks about concurrent bookings", "separates search from write"],
-        "weak_answer_signals":   ["jumps to database design without clarifying scale"],
-        "probe_questions":       ["What happens under 10x peak load?"],
-        "concepts_tested":       ["requirements_clarification", "scale_estimation"],
-        "stakeholder_question":  {
+        "weak_answer_signals": ["jumps to database design without clarifying scale"],
+        "probe_questions": ["What happens under 10x peak load?"],
+        "concepts_tested": ["requirements_clarification", "scale_estimation"],
+        "stakeholder_question": {
             "audience": "engineering_manager",
-            "prompt":   "Explain your approach to your EM in plain English.",
+            "prompt": "Explain your approach to your EM in plain English.",
         },
     }
 
@@ -127,28 +134,29 @@ def mock_stage_spec():
 @pytest.fixture
 def mock_confirmed_assessment():
     return {
-        "verdict":               "CONFIRMED",
-        "feedback":              "Strong requirements gathering. Good separation of concerns.",
-        "probe":                 None,
+        "verdict": "CONFIRMED",
+        "feedback": "Strong requirements gathering. Good separation of concerns.",
+        "probe": None,
         "concepts_demonstrated": ["requirements_clarification", "scale_estimation"],
-        "concepts_missing":      [],
-        "internal_notes":        "Candidate asked about scale, concurrency, and separation of flows.",
+        "concepts_missing": [],
+        "internal_notes": "Candidate asked about scale, concurrency, and separation of flows.",
     }
 
 
 @pytest.fixture
 def mock_partial_assessment():
     return {
-        "verdict":               "PARTIAL",
-        "feedback":              "Good start but missed the read/write separation.",
-        "probe":                 "How would you handle search traffic separately from booking writes?",
+        "verdict": "PARTIAL",
+        "feedback": "Good start but missed the read/write separation.",
+        "probe": "How would you handle search traffic separately from booking writes?",
         "concepts_demonstrated": ["requirements_clarification"],
-        "concepts_missing":      ["scale_estimation"],
-        "internal_notes":        "Surface-level requirements — needs probing.",
+        "concepts_missing": ["scale_estimation"],
+        "internal_notes": "Surface-level requirements — needs probing.",
     }
 
 
 # ── Rate limiter state ────────────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=True)
 def clear_rate_limit_windows():
@@ -157,6 +165,7 @@ def clear_rate_limit_windows():
     Clear it between tests or the 20-sessions/hour limit fires mid-suite.
     """
     from competitive_programming_factory.middleware import rate_limit
+
     rate_limit._windows.clear()
     yield
     rate_limit._windows.clear()

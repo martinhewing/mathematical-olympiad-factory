@@ -63,20 +63,20 @@ Patches applied (4 total)
 7. handleWhiteboardUpload — call updateSubmitGate after add/delete
 """
 
+import os
 import pathlib
 import py_compile
 import sys
 import tempfile
-import os
 
 VOICE = pathlib.Path("src/competitive_programming_factory/routes/voice.py")
 
 if not VOICE.exists():
     sys.exit(f"ERROR: {VOICE} not found. Run from repo root.")
 
-src      = VOICE.read_text()
+src = VOICE.read_text()
 original = src
-changes  = []
+changes = []
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

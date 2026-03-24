@@ -63,15 +63,15 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import anthropic
 
+import competitive_programming_factory.session_store as store
 from competitive_programming_factory.config import get_settings
 from competitive_programming_factory.curriculum import CONCEPT_BY_ID, Concept, DrawingRubricItem
 from competitive_programming_factory.logging import get_logger
-import competitive_programming_factory.session_store as store
 
 log = get_logger(__name__)
 
@@ -105,10 +105,11 @@ valid SVG you can — do not output an error message or explanation."""
 
 class DiagramGenerationError(Exception):
     """Raised when Claude fails to produce a valid SVG after all retries."""
+
     def __init__(self, concept_id: str, raw_response: str, attempt: int):
-        self.concept_id   = concept_id
+        self.concept_id = concept_id
         self.raw_response = raw_response
-        self.attempt      = attempt
+        self.attempt = attempt
         super().__init__(
             f"diagram_generator: failed to produce valid SVG for '{concept_id}' "
             f"after {attempt} attempt(s). "
@@ -118,37 +119,37 @@ class DiagramGenerationError(Exception):
 
 @dataclass
 class DiagramResult:
-    concept_id:      str
-    concept_name:    str
-    svg:             str
-    book_pages:      str
+    concept_id: str
+    concept_name: str
+    svg: str
+    book_pages: str
     solicit_drawing: bool
-    drawing_rubric:  list[dict[str, Any]]   # serialised DrawingRubricItem
-    diagram_type:    str
-    cached:          bool
+    drawing_rubric: list[dict[str, Any]]  # serialised DrawingRubricItem
+    diagram_type: str
+    cached: bool
 
     @classmethod
-    def from_concept(cls, concept: Concept, svg: str, *, cached: bool) -> "DiagramResult":
+    def from_concept(cls, concept: Concept, svg: str, *, cached: bool) -> DiagramResult:
         return cls(
-            concept_id      = concept.id,
-            concept_name    = concept.name,
-            svg             = svg,
-            book_pages      = concept.book_pages,
-            solicit_drawing = concept.solicit_drawing,
-            drawing_rubric  = _serialise_rubric(concept.drawing_rubric),
-            diagram_type    = concept.diagram_type,
-            cached          = cached,
+            concept_id=concept.id,
+            concept_name=concept.name,
+            svg=svg,
+            book_pages=concept.book_pages,
+            solicit_drawing=concept.solicit_drawing,
+            drawing_rubric=_serialise_rubric(concept.drawing_rubric),
+            diagram_type=concept.diagram_type,
+            cached=cached,
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "concept_id":      self.concept_id,
-            "concept_name":    self.concept_name,
-            "book_pages":      self.book_pages,
-            "diagram_type":    self.diagram_type,
+            "concept_id": self.concept_id,
+            "concept_name": self.concept_name,
+            "book_pages": self.book_pages,
+            "diagram_type": self.diagram_type,
             "solicit_drawing": self.solicit_drawing,
-            "drawing_rubric":  self.drawing_rubric,
-            "cached":          self.cached,
+            "drawing_rubric": self.drawing_rubric,
+            "cached": self.cached,
             # SVG omitted from dict — returned separately as raw bytes
         }
 
@@ -156,6 +157,7 @@ class DiagramResult:
 # ─────────────────────────────────────────────────────────────────────────────
 # Public API
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def get_or_generate_concept_diagram(concept_id: str) -> DiagramResult:
     """
@@ -181,7 +183,7 @@ def get_or_generate_concept_diagram(concept_id: str) -> DiagramResult:
             f"Valid ids: {sorted(CONCEPT_BY_ID.keys())}"
         )
 
-    concept   = CONCEPT_BY_ID[concept_id]
+    concept = CONCEPT_BY_ID[concept_id]
     cache_key = f"{_CACHE_KEY_PREFIX}{concept_id}"
 
     # ── Cache hit ────────────────────────────────────────────────────────────
@@ -197,9 +199,9 @@ def get_or_generate_concept_diagram(concept_id: str) -> DiagramResult:
     store.save_global(cache_key, svg)
     log.info(
         "diagram.generated_and_cached",
-        concept_id  = concept_id,
-        svg_bytes   = len(svg),
-        cache_key   = cache_key,
+        concept_id=concept_id,
+        svg_bytes=len(svg),
+        cache_key=cache_key,
     )
     return DiagramResult.from_concept(concept, svg, cached=False)
 
@@ -214,7 +216,7 @@ def invalidate_concept_diagram(concept_id: str) -> bool:
         raise KeyError(f"concept_id '{concept_id}' not found in curriculum.")
 
     cache_key = f"{_CACHE_KEY_PREFIX}{concept_id}"
-    existed   = store.delete_global(cache_key)
+    existed = store.delete_global(cache_key)
     log.info("diagram.invalidated", concept_id=concept_id, existed=existed)
     return existed
 
@@ -246,9 +248,9 @@ def pregenerate_all_diagrams() -> dict[str, bool]:
     successes = sum(v for v in results.values())
     log.info(
         "diagram.pregenerate_complete",
-        total     = len(results),
-        succeeded = successes,
-        failed    = len(results) - successes,
+        total=len(results),
+        succeeded=successes,
+        failed=len(results) - successes,
     )
     return results
 
@@ -256,15 +258,13 @@ def pregenerate_all_diagrams() -> dict[str, bool]:
 def list_cached_diagrams() -> list[str]:
     """Return concept_ids for all currently cached diagrams."""
     prefix = _CACHE_KEY_PREFIX
-    return [
-        key[len(prefix):]
-        for key in store.list_global(prefix)
-    ]
+    return [key[len(prefix) :] for key in store.list_global(prefix)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _generate_svg(concept: Concept, *, attempt: int = 1) -> str:
     """
@@ -272,24 +272,24 @@ def _generate_svg(concept: Concept, *, attempt: int = 1) -> str:
     Retries once on invalid response. Raises DiagramGenerationError on failure.
     """
     settings = get_settings()
-    client   = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
     prompt = _build_prompt(concept)
 
     start = time.perf_counter()
     try:
         message = client.messages.create(
-            model      = _DIAGRAM_MODEL,
-            max_tokens = _DIAGRAM_MAX_TOKENS,
-            system     = _SYSTEM_PROMPT,
-            messages   = [{"role": "user", "content": prompt}],
+            model=_DIAGRAM_MODEL,
+            max_tokens=_DIAGRAM_MAX_TOKENS,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.APIError as exc:
         log.error(
             "diagram.api_error",
-            concept_id = concept.id,
-            attempt    = attempt,
-            error      = str(exc),
+            concept_id=concept.id,
+            attempt=attempt,
+            error=str(exc),
         )
         raise
 
@@ -298,11 +298,11 @@ def _generate_svg(concept: Concept, *, attempt: int = 1) -> str:
 
     log.info(
         "diagram.claude_call",
-        concept_id    = concept.id,
-        attempt       = attempt,
-        input_tokens  = getattr(message.usage, "input_tokens", 0),
-        output_tokens = getattr(message.usage, "output_tokens", 0),
-        duration_ms   = duration_ms,
+        concept_id=concept.id,
+        attempt=attempt,
+        input_tokens=getattr(message.usage, "input_tokens", 0),
+        output_tokens=getattr(message.usage, "output_tokens", 0),
+        duration_ms=duration_ms,
     )
 
     svg = _extract_svg(raw)
@@ -310,9 +310,9 @@ def _generate_svg(concept: Concept, *, attempt: int = 1) -> str:
     if svg is None:
         log.warning(
             "diagram.invalid_response",
-            concept_id = concept.id,
-            attempt    = attempt,
-            preview    = raw[:300],
+            concept_id=concept.id,
+            attempt=attempt,
+            preview=raw[:300],
         )
         if attempt < 2:
             log.info("diagram.retrying", concept_id=concept.id)
@@ -394,9 +394,9 @@ def _validate_svg(svg: str) -> str | None:
 def _serialise_rubric(rubric: list[DrawingRubricItem]) -> list[dict[str, Any]]:
     return [
         {
-            "label":       item.label,
+            "label": item.label,
             "description": item.description,
-            "required":    item.required,
+            "required": item.required,
         }
         for item in rubric
     ]

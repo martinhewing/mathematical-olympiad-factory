@@ -2,10 +2,11 @@
 competitive_programming_factory/voice/tts.py
 Cartesia TTS — sonic-3 via AsyncCartesia v3 SDK.
 """
+
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator
 
 from cartesia import AsyncCartesia
 
@@ -15,10 +16,10 @@ from competitive_programming_factory.logging import get_logger
 log = get_logger(__name__)
 
 _OUTPUT_FORMAT = {
-    "container":   "mp3",
-    "encoding":    "mp3",
+    "container": "mp3",
+    "encoding": "mp3",
     "sample_rate": 44100,
-    "bit_rate":    128000,
+    "bit_rate": 128000,
 }
 
 
@@ -36,10 +37,10 @@ async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -
 
     async with AsyncCartesia(api_key=settings.cartesia_api_key) as client:
         response = await client.tts.generate(
-            model_id      = settings.cartesia_model,
-            transcript    = text,
-            voice         = {"mode": "id", "id": voice_id or settings.cartesia_voice_id},
-            output_format = _OUTPUT_FORMAT,
+            model_id=settings.cartesia_model,
+            transcript=text,
+            voice={"mode": "id", "id": voice_id or settings.cartesia_voice_id},
+            output_format=_OUTPUT_FORMAT,
         )
         await response.write_to_file(str(path))
 
@@ -51,7 +52,9 @@ async def generate_tts(text: str, save_path: str, voice_id: str | None = None) -
 async def stream_tts(text: str, voice_id: str | None = None) -> AsyncGenerator[bytes, None]:
     """Generate TTS and yield the full WAV in one chunk."""
     settings = _settings()
-    import tempfile, os
+    import os
+    import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
         tmp = f.name
     try:

@@ -33,6 +33,7 @@ else:
 open(path, "w").write(text)
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

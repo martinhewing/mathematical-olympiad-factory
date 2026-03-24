@@ -12,8 +12,9 @@ Testing:
   - Session state survives a store round-trip (simulates reconnect)
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 import competitive_programming_factory.session_store as store
 from competitive_programming_factory.domain.fsm.states import State
@@ -28,13 +29,19 @@ class TestSessionCreation:
     """
 
     def test_session_exists_in_store_after_creation(self, mock_scene):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a hotel reservation system")
 
         assert store.exists(sid)
 
     def test_fsm_is_at_requirements_after_creation(self, mock_scene):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a hotel reservation system")
 
         fsm, _ = store.load(sid)
@@ -42,7 +49,10 @@ class TestSessionCreation:
 
     def test_dll_has_staged_nodes_after_creation(self, mock_scene):
         """Teach, teach-check, and requirements nodes must all be present."""
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a hotel reservation system")
 
         _, dll = store.load(sid)
@@ -51,7 +61,10 @@ class TestSessionCreation:
         assert "requirements_001" in ids
 
     def test_scene_is_stored_and_retrievable(self, mock_scene):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a hotel reservation system")
 
         scene = store.load_field(sid, "scene")
@@ -67,7 +80,10 @@ class TestSubmissionDrivesState:
     """
 
     def _make_session(self, mock_scene):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             return engine.create_session("Design a hotel reservation system")
 
     def test_confirmed_verdict_advances_fsm_to_next_stage(
@@ -75,11 +91,21 @@ class TestSubmissionDrivesState:
     ):
         sid = self._make_session(mock_scene)
 
-        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
-            result = engine.process_submission(sid, stage_n=1, answer="I would start by clarifying scale.")
+        with (
+            patch(
+                "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
+                return_value=mock_stage_spec,
+            ),
+            patch(
+                "competitive_programming_factory.engine.session_engine.render_and_call",
+                return_value=mock_confirmed_assessment,
+            ),
+        ):
+            result = engine.process_submission(
+                sid, stage_n=1, answer="I would start by clarifying scale."
+            )
 
-        assert result.verdict  == "CONFIRMED"
+        assert result.verdict == "CONFIRMED"
         assert result.next_url == f"/session/{sid}/stage/2"
 
     def test_confirmed_verdict_writes_comprehension_record_to_dll(
@@ -87,11 +113,19 @@ class TestSubmissionDrivesState:
     ):
         sid = self._make_session(mock_scene)
 
-        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
+        with (
+            patch(
+                "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
+                return_value=mock_stage_spec,
+            ),
+            patch(
+                "competitive_programming_factory.engine.session_engine.render_and_call",
+                return_value=mock_confirmed_assessment,
+            ),
+        ):
             engine.process_submission(sid, stage_n=1, answer="Strong answer.")
 
-        _, dll   = store.load(sid)
+        _, dll = store.load(sid)
         confirmed = [n for n in dll.iterate_oldest_first() if n.status == "confirmed"]
         assert len(confirmed) >= 1
 
@@ -100,17 +134,23 @@ class TestSubmissionDrivesState:
     ):
         sid = self._make_session(mock_scene)
 
-        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_partial_assessment):
+        with (
+            patch(
+                "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
+                return_value=mock_stage_spec,
+            ),
+            patch(
+                "competitive_programming_factory.engine.session_engine.render_and_call",
+                return_value=mock_partial_assessment,
+            ),
+        ):
             result = engine.process_submission(sid, stage_n=1, answer="Partial answer.")
 
-        assert result.verdict  == "PARTIAL"
+        assert result.verdict == "PARTIAL"
         assert result.next_url == f"/session/{sid}/stage/1"
-        assert result.probe    is not None
+        assert result.probe is not None
 
-    def test_probe_limit_triggers_flagged_without_calling_claude(
-        self, mock_scene, mock_stage_spec
-    ):
+    def test_probe_limit_triggers_flagged_without_calling_claude(self, mock_scene, mock_stage_spec):
         """
         Once probe limit is reached the engine must NOT call Claude.
         Calling Claude after probe limit would generate a 4th probe — a bug.
@@ -119,16 +159,24 @@ class TestSubmissionDrivesState:
 
         fsm, dll = store.load(sid)
         fsm.transition_to(State.SYSTEM_DESIGN, trigger="test")
-        fsm.transition_to(State.NODE_SESSION,  trigger="test")
-        fsm.transition_to(State.OOD_STAGE,     trigger="test")
+        fsm.transition_to(State.NODE_SESSION, trigger="test")
+        fsm.transition_to(State.OOD_STAGE, trigger="test")
 
         from competitive_programming_factory.domain.fsm.machine import PROBE_LIMIT
+
         for _ in range(PROBE_LIMIT):
             fsm.increment_turn()
         store.save(sid, fsm, dll)
 
-        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("competitive_programming_factory.engine.session_engine.render_and_call") as mock_claude:
+        with (
+            patch(
+                "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
+                return_value=mock_stage_spec,
+            ),
+            patch(
+                "competitive_programming_factory.engine.session_engine.render_and_call"
+            ) as mock_claude,
+        ):
             result = engine.process_submission(sid, stage_n=1, answer="Still struggling.")
 
         mock_claude.assert_not_called()
@@ -144,12 +192,15 @@ class TestStatePolling:
     """
 
     def test_state_reflects_fsm_phase_after_creation(self, mock_scene):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a URL shortener")
 
         state = engine.get_state(sid)
         assert state["fsm_state"] == "Requirements Gathering"
-        assert state["phase"]     == "simulate"
+        assert state["phase"] == "simulate"
 
     def test_state_returns_none_for_unknown_session(self):
         assert engine.get_state("nonexistent") is None
@@ -157,11 +208,22 @@ class TestStatePolling:
     def test_confirmed_stage_advances_next_url_to_stage_2(
         self, mock_scene, mock_stage_spec, mock_confirmed_assessment
     ):
-        with patch("competitive_programming_factory.engine.session_engine._generate_scene", return_value=mock_scene):
+        with patch(
+            "competitive_programming_factory.engine.session_engine._generate_scene",
+            return_value=mock_scene,
+        ):
             sid = engine.create_session("Design a rate limiter")
 
-        with patch("competitive_programming_factory.engine.session_engine.get_or_generate_stage", return_value=mock_stage_spec), \
-             patch("competitive_programming_factory.engine.session_engine.render_and_call", return_value=mock_confirmed_assessment):
+        with (
+            patch(
+                "competitive_programming_factory.engine.session_engine.get_or_generate_stage",
+                return_value=mock_stage_spec,
+            ),
+            patch(
+                "competitive_programming_factory.engine.session_engine.render_and_call",
+                return_value=mock_confirmed_assessment,
+            ),
+        ):
             result = engine.process_submission(sid, stage_n=1, answer="Good answer.")
 
         assert result.next_url == f"/session/{sid}/stage/2"

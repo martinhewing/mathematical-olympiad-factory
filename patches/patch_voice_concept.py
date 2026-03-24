@@ -15,15 +15,19 @@ Three patches to src/competitive_programming_factory/routes/voice.py:
            loadStage() and advanceStage()
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 VOICE = pathlib.Path("src/competitive_programming_factory/routes/voice.py")
 if not VOICE.exists():
     sys.exit(f"ERROR: {VOICE} not found — run from repo root")
 
-src      = VOICE.read_text()
+src = VOICE.read_text()
 original = src
-changes  = []
+changes = []
 
 
 def _fail(patch_n: str, anchors: list[str]) -> None:
@@ -43,53 +47,53 @@ def _fail(patch_n: str, anchors: list[str]) -> None:
 # =============================================================================
 
 P1_OLD = (
-    '    # Teach phase: use lesson greeting + lesson content\n'
+    "    # Teach phase: use lesson greeting + lesson content\n"
     '    if fsm_state in {"Teach", "Teach Comprehension Check"}:\n'
-    '        greeting = agent.greeting(first_name)\n'
+    "        greeting = agent.greeting(first_name)\n"
     '        lesson = spec.get("greeting", "")\n'
     '        check = spec.get("comprehension_check", "")\n'
-    '        parts = [p for p in [greeting, lesson, check] if p]'
+    "        parts = [p for p in [greeting, lesson, check] if p]"
 )
 
 P1_OLD_FALLBACK = (
-    '    # Teach phase: use lesson greeting + lesson content\n'
+    "    # Teach phase: use lesson greeting + lesson content\n"
     '    if fsm_state in {"Teach", "Teach Comprehension Check"}:\n'
-    '        greeting = agent.greeting(first_name)\n'
+    "        greeting = agent.greeting(first_name)\n"
     '        lesson   = spec.get("greeting", "")\n'
     '        concepts = spec.get("concepts", [])\n'
     '        concept_text = "  ".join(\n'
-    '            f"{c.get(\'name\',\'\')}: {c.get(\'explanation\',\'\')}  For example: {c.get(\'example\',\'\')}"\n'
-    '            for c in concepts[:3]\n'
-    '        )\n'
+    "            f\"{c.get('name','')}: {c.get('explanation','')}  For example: {c.get('example','')}\"\n"
+    "            for c in concepts[:3]\n"
+    "        )\n"
     '        check = spec.get("comprehension_check", "")\n'
-    '        parts = [p for p in [greeting, lesson, concept_text, check] if p]'
+    "        parts = [p for p in [greeting, lesson, concept_text, check] if p]"
 )
 
 P1_NEW = (
-    '    # Teach phase: determine TTS text based on session architecture\n'
-    '    _TEACH_STATES = {\n'
+    "    # Teach phase: determine TTS text based on session architecture\n"
+    "    _TEACH_STATES = {\n"
     '        "Teach", "Teach Comprehension Check",\n'
     '        "Concept Teach", "Concept Teach Check",\n'
-    '    }\n'
+    "    }\n"
     '    _JORDAN_STATES = {"Concept Stage"}\n'
-    '    if fsm_state in _TEACH_STATES:\n'
+    "    if fsm_state in _TEACH_STATES:\n"
     '        greeting = spec.get("greeting", "")\n'
     '        check    = spec.get("comprehension_check", "")\n'
-    '        # For concept sessions, just speak the greeting —\n'
-    '        # full lesson is shown on screen. Fast TTS (~150 chars).\n'
-    '        # For legacy sessions, include check question too.\n'
+    "        # For concept sessions, just speak the greeting —\n"
+    "        # full lesson is shown on screen. Fast TTS (~150 chars).\n"
+    "        # For legacy sessions, include check question too.\n"
     '        if fsm_state in {"Concept Teach", "Concept Teach Check"}:\n'
-    '            parts = [p for p in [greeting] if p]\n'
-    '        else:\n'
-    '            parts = [p for p in [greeting, check] if p]\n'
-    '    elif fsm_state in _JORDAN_STATES:\n'
-    '        # Concept stage: scene hook + opening question\n'
+    "            parts = [p for p in [greeting] if p]\n"
+    "        else:\n"
+    "            parts = [p for p in [greeting, check] if p]\n"
+    "    elif fsm_state in _JORDAN_STATES:\n"
+    "        # Concept stage: scene hook + opening question\n"
     '        scene_hook = spec.get("scene_hook", "")\n'
     '        question   = spec.get("opening_question", "")\n'
-    '        parts      = [p for p in [scene_hook, question] if p]'
+    "        parts      = [p for p in [scene_hook, question] if p]"
 )
 
-if '"Concept Teach"' in src and '_TEACH_STATES' in src:
+if '"Concept Teach"' in src and "_TEACH_STATES" in src:
     print("  SKIP  PATCH 1 — concept states already in _stage_text()")
     changes.append("PATCH 1 — already applied")
 elif P1_OLD in src:
@@ -99,10 +103,13 @@ elif P1_OLD_FALLBACK in src:
     src = src.replace(P1_OLD_FALLBACK, P1_NEW, 1)
     changes.append("PATCH 1 — _stage_text(): concept states + TTS shortening (fallback match)")
 else:
-    _fail("PATCH 1", [
-        '    # Teach phase: use lesson greeting + lesson content',
-        '    if fsm_state in {"Teach", "Teach Comprehension Check"}:',
-    ])
+    _fail(
+        "PATCH 1",
+        [
+            "    # Teach phase: use lesson greeting + lesson content",
+            '    if fsm_state in {"Teach", "Teach Comprehension Check"}:',
+        ],
+    )
 
 
 # =============================================================================
@@ -111,7 +118,7 @@ else:
 # Inject into the <style> block in _interview_html just before the closing </style>
 # =============================================================================
 
-P2_CSS = '''
+P2_CSS = """
 /* ── Concept progress pills ──────────────────────────────────── */
 .progress-bar {{
   display: flex;
@@ -155,25 +162,25 @@ P2_CSS = '''
 .concept-pill.current-alex {{ background: var(--accent); width: 32px; }}
 .concept-pill.current-jordan {{ background: var(--partial); width: 32px; }}
 .concept-pill.flagged    {{ background: var(--danger); }}
-'''
+"""
 
-P2_ANCHOR = '/* ── Top bar ─────────────────────────────────────────────────── */'
-P2_ANCHOR_ALT = '/* ── Tsrc/competitive_programming_factory/routes/voice.py'
+P2_ANCHOR = "/* ── Top bar ─────────────────────────────────────────────────── */"
+P2_ANCHOR_ALT = "/* ── Tsrc/competitive_programming_factory/routes/voice.py"
 
-if '.concept-pill' in src:
+if ".concept-pill" in src:
     print("  SKIP  PATCH 2 — progress pill CSS already present")
     changes.append("PATCH 2 — already applied")
 elif P2_ANCHOR in src:
-    src = src.replace(P2_ANCHOR, P2_CSS + '\n' + P2_ANCHOR, 1)
+    src = src.replace(P2_ANCHOR, P2_CSS + "\n" + P2_ANCHOR, 1)
     changes.append("PATCH 2 — progress pill CSS added")
 else:
     # Try to find any style block close tag
-    if '</style>' in src:
+    if "</style>" in src:
         # Insert before first </style>
-        src = src.replace('</style>', P2_CSS + '\n</style>', 1)
+        src = src.replace("</style>", P2_CSS + "\n</style>", 1)
         changes.append("PATCH 2 — progress pill CSS added (</style> anchor)")
     else:
-        _fail("PATCH 2", [P2_ANCHOR, '</style>'])
+        _fail("PATCH 2", [P2_ANCHOR, "</style>"])
 
 
 # =============================================================================
@@ -195,9 +202,12 @@ elif P3A_OLD in src:
     src = src.replace(P3A_OLD, P3A_NEW, 1)
     changes.append("PATCH 3A — progress bar div added to topbar HTML")
 else:
-    _fail("PATCH 3A", [
-        '<div id="stage-indicator" class="stage-indicator">Stage 1</div>',
-    ])
+    _fail(
+        "PATCH 3A",
+        [
+            '<div id="stage-indicator" class="stage-indicator">Stage 1</div>',
+        ],
+    )
 
 
 # =============================================================================
@@ -206,7 +216,7 @@ else:
 # Insert after startTimer() function definition
 # =============================================================================
 
-LOAD_PROGRESS_FN = '''
+LOAD_PROGRESS_FN = """
 // ── Progress bar ─────────────────────────────────────────────────
 async function loadProgress() {{
   try {{
@@ -232,12 +242,12 @@ async function loadProgress() {{
   }}
 }}
 
-'''
+"""
 
-P3B_ANCHOR = '// ── Load stage ───────────────────────────────────────────'
-P3B_ANCHOR_ALT = '// ── Load stage ──────────────────────────────────────────────────'
+P3B_ANCHOR = "// ── Load stage ───────────────────────────────────────────"
+P3B_ANCHOR_ALT = "// ── Load stage ──────────────────────────────────────────────────"
 
-if 'async function loadProgress()' in src:
+if "async function loadProgress()" in src:
     print("  SKIP  PATCH 3B — loadProgress() already defined")
     changes.append("PATCH 3B — already applied")
 elif P3B_ANCHOR in src:
@@ -247,8 +257,14 @@ elif P3B_ANCHOR_ALT in src:
     src = src.replace(P3B_ANCHOR_ALT, LOAD_PROGRESS_FN + P3B_ANCHOR_ALT, 1)
     changes.append("PATCH 3B — loadProgress() function added (alt anchor)")
 else:
-    _fail("PATCH 3B", [P3B_ANCHOR, P3B_ANCHOR_ALT,
-                       '// ── Timer ──────────────────────────────────────────────────────'])
+    _fail(
+        "PATCH 3B",
+        [
+            P3B_ANCHOR,
+            P3B_ANCHOR_ALT,
+            "// ── Timer ──────────────────────────────────────────────────────",
+        ],
+    )
 
 
 # =============================================================================
@@ -258,31 +274,34 @@ else:
 # =============================================================================
 
 P3C_OLD = (
-    '    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n'
-    '    stageData  = await res.json();\n'
-    '\n'
-    '    // Show question + scene based on phase'
+    "    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n"
+    "    stageData  = await res.json();\n"
+    "\n"
+    "    // Show question + scene based on phase"
 )
 
 P3C_NEW = (
-    '    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n'
-    '    stageData  = await res.json();\n'
-    '    loadProgress();  // refresh concept pills (non-blocking)\n'
-    '\n'
-    '    // Show question + scene based on phase'
+    "    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n"
+    "    stageData  = await res.json();\n"
+    "    loadProgress();  // refresh concept pills (non-blocking)\n"
+    "\n"
+    "    // Show question + scene based on phase"
 )
 
-if 'loadProgress();  // refresh concept pills' in src:
+if "loadProgress();  // refresh concept pills" in src:
     print("  SKIP  PATCH 3C — loadProgress() call already in loadStage()")
     changes.append("PATCH 3C — already applied")
 elif P3C_OLD in src:
     src = src.replace(P3C_OLD, P3C_NEW, 1)
     changes.append("PATCH 3C — loadProgress() called inside loadStage()")
 else:
-    _fail("PATCH 3C", [
-        "    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n"
-        "    stageData  = await res.json();",
-    ])
+    _fail(
+        "PATCH 3C",
+        [
+            "    const res  = await fetch(`/session/${{SESSION_ID}}/stage/${{n}}`);\n"
+            "    stageData  = await res.json();",
+        ],
+    )
 
 
 # =============================================================================
@@ -290,35 +309,38 @@ else:
 # =============================================================================
 
 P3D_OLD = (
-    'function advanceStage(n) {{\n'
-    '  document.getElementById(\'assessment\').className = \'assessment\';\n'
-    '  document.getElementById(\'transcript-preview\').className = \'transcript-preview\';\n'
-    '  deactivateWhiteboard();\n'
-    '  loadStage(n);\n'
-    '}}'
+    "function advanceStage(n) {{\n"
+    "  document.getElementById('assessment').className = 'assessment';\n"
+    "  document.getElementById('transcript-preview').className = 'transcript-preview';\n"
+    "  deactivateWhiteboard();\n"
+    "  loadStage(n);\n"
+    "}}"
 )
 
 P3D_NEW = (
-    'function advanceStage(n) {{\n'
-    '  document.getElementById(\'assessment\').className = \'assessment\';\n'
-    '  document.getElementById(\'transcript-preview\').className = \'transcript-preview\';\n'
-    '  deactivateWhiteboard();\n'
-    '  loadProgress();\n'
-    '  loadStage(n);\n'
-    '}}'
+    "function advanceStage(n) {{\n"
+    "  document.getElementById('assessment').className = 'assessment';\n"
+    "  document.getElementById('transcript-preview').className = 'transcript-preview';\n"
+    "  deactivateWhiteboard();\n"
+    "  loadProgress();\n"
+    "  loadStage(n);\n"
+    "}}"
 )
 
-if 'loadProgress();\n  loadStage(n);\n}}' in src:
+if "loadProgress();\n  loadStage(n);\n}}" in src:
     print("  SKIP  PATCH 3D — loadProgress() already in advanceStage()")
     changes.append("PATCH 3D — already applied")
 elif P3D_OLD in src:
     src = src.replace(P3D_OLD, P3D_NEW, 1)
     changes.append("PATCH 3D — loadProgress() called inside advanceStage()")
 else:
-    _fail("PATCH 3D", [
-        "function advanceStage(n) {{",
-        "  loadStage(n);",
-    ])
+    _fail(
+        "PATCH 3D",
+        [
+            "function advanceStage(n) {{",
+            "  loadStage(n);",
+        ],
+    )
 
 
 # =============================================================================

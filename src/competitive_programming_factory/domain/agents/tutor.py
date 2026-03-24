@@ -12,8 +12,11 @@ Personality:
 Phase ownership:  TEACH  →  TEACH_CHECK
 Cartesia voice:   cartesia_tutor_voice_id  (distinct from the interviewer)
 """
+
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
 from competitive_programming_factory.domain.agents.base import BaseAgent
 
 if TYPE_CHECKING:
@@ -21,7 +24,6 @@ if TYPE_CHECKING:
 
 
 class TutorAgent(BaseAgent):
-
     @property
     def display_name(self) -> str:
         return "Alistair (Senior Staff Engineer)"
@@ -30,7 +32,7 @@ class TutorAgent(BaseAgent):
     def role_label(self) -> str:
         return "TUTOR"
 
-    def voice_id(self, settings: "Settings") -> str:
+    def voice_id(self, settings: Settings) -> str:
         return settings.cartesia_tutor_voice_id
 
     def system_prompt(self, candidate_first_name: str) -> str:

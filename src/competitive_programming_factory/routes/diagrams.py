@@ -45,7 +45,7 @@ Or in the factory pattern used by the existing app.py:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
 from competitive_programming_factory.curriculum import CONCEPT_BY_ID
@@ -58,7 +58,7 @@ from competitive_programming_factory.engine.diagram_generator import (
 )
 from competitive_programming_factory.logging import get_logger
 
-log    = get_logger(__name__)
+log = get_logger(__name__)
 router = APIRouter(tags=["diagrams"])
 
 
@@ -66,19 +66,20 @@ router = APIRouter(tags=["diagrams"])
 # GET /concept/{concept_id}/diagram
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/concept/{concept_id}/diagram",
-    response_class = Response,
-    responses = {
+    response_class=Response,
+    responses={
         200: {
-            "content":     {"image/svg+xml": {}},
+            "content": {"image/svg+xml": {}},
             "description": "Raw SVG diagram — embed directly or render inline.",
         },
         404: {"description": "concept_id not found in curriculum"},
         500: {"description": "Claude failed to generate a valid diagram"},
     },
-    summary     = "Get concept diagram (SVG)",
-    description = (
+    summary="Get concept diagram (SVG)",
+    description=(
         "Returns the reference architecture diagram for this concept as raw SVG.\n\n"
         "**Cache behaviour**: first call generates the diagram via Claude (~3–5s). "
         "Subsequent calls are instant (global cache shared across all sessions).\n\n"
@@ -99,12 +100,12 @@ def get_concept_diagram(concept_id: str):
     except DiagramGenerationError as exc:
         log.error(
             "diagram.route_generation_failed",
-            concept_id = concept_id,
-            error      = str(exc),
+            concept_id=concept_id,
+            error=str(exc),
         )
         raise HTTPException(
-            status_code = 500,
-            detail      = (
+            status_code=500,
+            detail=(
                 f"Failed to generate diagram for '{concept_id}'. "
                 "The AI model did not produce valid SVG. "
                 "Try again or use /concept/{concept_id}/diagram/invalidate to reset."
@@ -112,14 +113,14 @@ def get_concept_diagram(concept_id: str):
         ) from exc
 
     return Response(
-        content      = result.svg,
-        media_type   = "image/svg+xml",
-        headers      = {
+        content=result.svg,
+        media_type="image/svg+xml",
+        headers={
             # Allow the browser to cache the SVG — it only changes on explicit invalidation
             "Cache-Control": "public, max-age=86400",
-            "X-Concept-Id":  concept_id,
-            "X-Cached":      str(result.cached).lower(),
-            "X-Book-Pages":  result.book_pages.encode("ascii", errors="replace").decode("ascii"),
+            "X-Concept-Id": concept_id,
+            "X-Cached": str(result.cached).lower(),
+            "X-Book-Pages": result.book_pages.encode("ascii", errors="replace").decode("ascii"),
         },
     )
 
@@ -128,10 +129,11 @@ def get_concept_diagram(concept_id: str):
 # GET /concept/{concept_id}/diagram/meta
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/concept/{concept_id}/diagram/meta",
-    summary     = "Get concept diagram metadata",
-    description = (
+    summary="Get concept diagram metadata",
+    description=(
         "Returns metadata for the concept diagram — rubric items, solicit_drawing flag, "
         "and diagram type. Use this to decide whether to activate the whiteboard panel.\n\n"
         "Does **not** generate the diagram if it isn't cached yet. "
@@ -151,24 +153,24 @@ def get_concept_diagram_meta(concept_id: str):
     cached_ids = list_cached_diagrams()
 
     return {
-        "concept_id":      concept.id,
-        "concept_name":    concept.name,
-        "book_pages":      concept.book_pages,
-        "diagram_type":    concept.diagram_type,
+        "concept_id": concept.id,
+        "concept_name": concept.name,
+        "book_pages": concept.book_pages,
+        "diagram_type": concept.diagram_type,
         "solicit_drawing": concept.solicit_drawing,
-        "diagram_url":     f"/concept/{concept_id}/diagram",
-        "is_cached":       concept_id in cached_ids,
+        "diagram_url": f"/concept/{concept_id}/diagram",
+        "is_cached": concept_id in cached_ids,
         "drawing_rubric": [
             {
-                "label":       item.label,
+                "label": item.label,
                 "description": item.description,
-                "required":    item.required,
+                "required": item.required,
             }
             for item in concept.drawing_rubric
         ],
         "jordan_minimum_bar": concept.jordan_minimum_bar,
-        "faang_signal":       concept.faang_signal,
-        "why_it_matters":     concept.why_it_matters,
+        "faang_signal": concept.faang_signal,
+        "why_it_matters": concept.why_it_matters,
     }
 
 
@@ -176,10 +178,11 @@ def get_concept_diagram_meta(concept_id: str):
 # POST /concept/{concept_id}/diagram/invalidate   (admin)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/concept/{concept_id}/diagram/invalidate",
-    summary     = "Invalidate cached diagram (admin)",
-    description = (
+    summary="Invalidate cached diagram (admin)",
+    description=(
         "Removes the cached SVG for this concept. "
         "The next call to GET /concept/{concept_id}/diagram will regenerate it.\n\n"
         "Use this when `curriculum.py` changes the `diagram_prompt` for a concept."
@@ -191,7 +194,7 @@ def invalidate_diagram(concept_id: str):
 
     existed = invalidate_concept_diagram(concept_id)
     return {
-        "concept_id":  concept_id,
+        "concept_id": concept_id,
         "invalidated": existed,
         "message": (
             f"Cache cleared for '{concept_id}'. Next GET will regenerate."
@@ -205,10 +208,11 @@ def invalidate_diagram(concept_id: str):
 # POST /diagrams/pregenerate   (admin)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/diagrams/pregenerate",
-    summary     = "Warm the diagram cache for all concepts (admin)",
-    description = (
+    summary="Warm the diagram cache for all concepts (admin)",
+    description=(
         "Generates and caches diagrams for all 12 curriculum concepts. "
         "Already-cached concepts are skipped.\n\n"
         "This is a **long-running request** (~30–60 seconds for 12 diagrams). "
@@ -221,13 +225,13 @@ def pregenerate_diagrams():
     log.info("diagram.pregenerate_all_requested")
     results = pregenerate_all_diagrams()
     succeeded = [cid for cid, ok in results.items() if ok]
-    failed    = [cid for cid, ok in results.items() if not ok]
+    failed = [cid for cid, ok in results.items() if not ok]
 
     return {
-        "total":     len(results),
+        "total": len(results),
         "succeeded": len(succeeded),
-        "failed":    len(failed),
-        "results":   results,
+        "failed": len(failed),
+        "results": results,
         **({"failed_ids": failed} if failed else {}),
     }
 
@@ -236,23 +240,24 @@ def pregenerate_diagrams():
 # GET /diagrams/cached
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/diagrams/cached",
-    summary     = "List cached concept diagrams",
-    description = (
+    summary="List cached concept diagrams",
+    description=(
         "Returns the concept_ids of all diagrams currently in the global cache.\n\n"
         "Useful for checking warm-up state after deployment."
     ),
 )
 def get_cached_diagrams():
     """List all concept_ids with a cached diagram."""
-    cached  = list_cached_diagrams()
+    cached = list_cached_diagrams()
     all_ids = list(CONCEPT_BY_ID.keys())
     return {
-        "cached_count":   len(cached),
+        "cached_count": len(cached),
         "total_concepts": len(all_ids),
-        "cached":         sorted(cached),
-        "pending":        sorted(set(all_ids) - set(cached)),
+        "cached": sorted(cached),
+        "pending": sorted(set(all_ids) - set(cached)),
     }
 
 
@@ -260,11 +265,12 @@ def get_cached_diagrams():
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _require_valid_concept(concept_id: str) -> None:
     if concept_id not in CONCEPT_BY_ID:
         raise HTTPException(
-            status_code = 404,
-            detail      = (
+            status_code=404,
+            detail=(
                 f"Concept '{concept_id}' not found. "
                 f"Valid concept_ids: {sorted(CONCEPT_BY_ID.keys())}"
             ),

@@ -22,7 +22,6 @@ import pytest
 import competitive_programming_factory.session_store as store
 from competitive_programming_factory.engine.concept_store import (
     CONFIDENCE_THRESHOLD,
-    REQUIRED_CONCEPTS,
     accumulate,
     clear_stage,
     evaluate,
@@ -47,9 +46,9 @@ SID = "test-session"
 
 # ── Accumulation ──────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestAccumulation:
-
     def test_single_turn_stores_concepts(self):
         result = accumulate(SID, 1, ["requirements_clarification", "scale_estimation"])
         assert result == {"requirements_clarification", "scale_estimation"}
@@ -77,26 +76,32 @@ class TestAccumulation:
 
 # ── Confidence gate ───────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestConfidenceGate:
-
     def test_high_confidence_accepted(self):
         result = accumulate(
-            SID, 1, ["requirements_clarification"],
+            SID,
+            1,
+            ["requirements_clarification"],
             confidence_scores={"requirements_clarification": 0.95},
         )
         assert "requirements_clarification" in result
 
     def test_low_confidence_rejected(self):
         result = accumulate(
-            SID, 1, ["requirements_clarification"],
+            SID,
+            1,
+            ["requirements_clarification"],
             confidence_scores={"requirements_clarification": 0.50},
         )
         assert "requirements_clarification" not in result
 
     def test_exact_threshold_accepted(self):
         result = accumulate(
-            SID, 1, ["requirements_clarification"],
+            SID,
+            1,
+            ["requirements_clarification"],
             confidence_scores={"requirements_clarification": CONFIDENCE_THRESHOLD},
         )
         assert "requirements_clarification" in result
@@ -112,7 +117,9 @@ class TestConfidenceGate:
 
     def test_mixed_confidence(self):
         result = accumulate(
-            SID, 1, ["requirements_clarification", "scale_estimation"],
+            SID,
+            1,
+            ["requirements_clarification", "scale_estimation"],
             confidence_scores={
                 "requirements_clarification": 0.95,
                 "scale_estimation": 0.40,
@@ -124,9 +131,9 @@ class TestConfidenceGate:
 
 # ── Semilattice evaluation ────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestSemilatticeEvaluation:
-
     def test_passes_when_all_required_demonstrated(self):
         accumulate(SID, 1, ["requirements_clarification", "scale_estimation", "api_design"])
         result = evaluate(SID, 1)
@@ -161,19 +168,25 @@ class TestSemilatticeEvaluation:
 
     def test_superset_still_passes(self):
         """Extra concepts beyond required don't break anything."""
-        accumulate(SID, 1, [
-            "requirements_clarification", "scale_estimation", "api_design",
-            "bonus_insight",
-        ])
+        accumulate(
+            SID,
+            1,
+            [
+                "requirements_clarification",
+                "scale_estimation",
+                "api_design",
+                "bonus_insight",
+            ],
+        )
         result = evaluate(SID, 1)
         assert result["passed"] is True
 
 
 # ── Required concepts ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestRequiredConcepts:
-
     def test_known_stages_return_defined_sets(self):
         assert get_required(1) == {"requirements_clarification", "scale_estimation", "api_design"}
         assert get_required(2) == {"data_model", "storage_choice", "schema_design"}
@@ -187,9 +200,9 @@ class TestRequiredConcepts:
 
 # ── Retraction ────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestRetraction:
-
     def test_retract_removes_concept(self):
         accumulate(SID, 1, ["requirements_clarification", "scale_estimation"])
         result = retract(SID, 1, "requirements_clarification")
@@ -208,9 +221,9 @@ class TestRetraction:
 
 # ── Fragment recording ────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestFragmentRecording:
-
     def test_fragments_accumulate(self):
         record_fragment(SID, 1, "First answer about requirements")
         record_fragment(SID, 1, "Second answer about scale")
@@ -221,9 +234,9 @@ class TestFragmentRecording:
 
 # ── Clear ─────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.unit
 class TestClearStage:
-
     def test_clear_wipes_concepts_and_fragments(self):
         accumulate(SID, 1, ["requirements_clarification"])
         record_fragment(SID, 1, "Some answer")

@@ -61,10 +61,11 @@ def _fragments_key(session_id: str, stage_n: int) -> str:
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
+
 def accumulate(
-    session_id:        str,
-    stage_n:           int,
-    concepts:          list[str],
+    session_id: str,
+    stage_n: int,
+    concepts: list[str],
     confidence_scores: dict[str, float] | None = None,
 ) -> set[str]:
     """
@@ -85,27 +86,27 @@ def accumulate(
         else:
             log.debug(
                 "concept.below_threshold",
-                session_id = session_id,
-                stage_n    = stage_n,
-                concept    = concept,
-                confidence = confidence,
+                session_id=session_id,
+                stage_n=stage_n,
+                concept=concept,
+                confidence=confidence,
             )
 
     store.save_field(session_id, _key(session_id, stage_n), sorted(current))
 
     log.info(
         "concepts.accumulated",
-        session_id  = session_id,
-        stage_n     = stage_n,
-        added       = concepts,
-        total       = sorted(current),
+        session_id=session_id,
+        stage_n=stage_n,
+        added=concepts,
+        total=sorted(current),
     )
     return current
 
 
 def record_fragment(session_id: str, stage_n: int, answer: str) -> None:
     """Append a raw answer fragment for audit trail."""
-    key       = _fragments_key(session_id, stage_n)
+    key = _fragments_key(session_id, stage_n)
     fragments = store.load_field(session_id, key) or []
     fragments.append(answer)
     store.save_field(session_id, key, fragments)
@@ -145,21 +146,17 @@ def evaluate(session_id: str, stage_n: int) -> dict[str, Any]:
         }
     """
     accumulated = get_accumulated(session_id, stage_n)
-    required    = get_required(stage_n)
-    missing     = required - accumulated
+    required = get_required(stage_n)
+    missing = required - accumulated
 
-    coverage = (
-        len(required & accumulated) / len(required)
-        if required
-        else 1.0
-    )
+    coverage = len(required & accumulated) / len(required) if required else 1.0
 
     return {
-        "passed":      len(missing) == 0,
+        "passed": len(missing) == 0,
         "accumulated": accumulated,
-        "required":    required,
-        "missing":     missing,
-        "coverage":    coverage,
+        "required": required,
+        "missing": missing,
+        "coverage": coverage,
     }
 
 
@@ -175,10 +172,10 @@ def retract(session_id: str, stage_n: int, concept: str) -> set[str]:
 
     log.info(
         "concept.retracted",
-        session_id = session_id,
-        stage_n    = stage_n,
-        concept    = concept,
-        remaining  = sorted(current),
+        session_id=session_id,
+        stage_n=stage_n,
+        concept=concept,
+        remaining=sorted(current),
     )
     return current
 

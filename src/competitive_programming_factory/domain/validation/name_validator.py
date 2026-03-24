@@ -22,6 +22,7 @@ proceeds and first_name is inferred from the raw input.
 
 Set VALIDATE_CANDIDATE_NAMES=False in .env to bypass (useful in tests).
 """
+
 from __future__ import annotations
 
 import json
@@ -37,9 +38,9 @@ log = get_logger(__name__)
 
 @dataclass
 class NameValidationResult:
-    is_valid:   bool
-    first_name: str   # e.g. "Martin" from "Martin Hewing"
-    reason:     str   # empty string if valid
+    is_valid: bool
+    first_name: str  # e.g. "Martin" from "Martin Hewing"
+    reason: str  # empty string if valid
 
 
 _SYSTEM = """\
@@ -86,22 +87,20 @@ def validate_candidate_name(raw_name: str) -> NameValidationResult:
     # Fast-reject obvious cases without a Claude call
     if not stripped or len(stripped) < 2:
         return NameValidationResult(
-            is_valid   = False,
-            first_name = "",
-            reason     = "Name must be at least 2 characters.",
+            is_valid=False,
+            first_name="",
+            reason="Name must be at least 2 characters.",
         )
 
     log.info("name_validator.start", raw=stripped[:40])
 
     try:
-        client  = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         message = client.messages.create(
-            model      = settings.anthropic_model,
-            max_tokens = 150,
-            system     = _SYSTEM,
-            messages   = [
-                {"role": "user", "content": f'Validate this name: "{stripped}"'}
-            ],
+            model=settings.anthropic_model,
+            max_tokens=150,
+            system=_SYSTEM,
+            messages=[{"role": "user", "content": f'Validate this name: "{stripped}"'}],
         )
         raw_json = message.content[0].text.strip()
 
@@ -121,13 +120,13 @@ def validate_candidate_name(raw_name: str) -> NameValidationResult:
         return NameValidationResult(is_valid=True, first_name=first, reason="")
 
     result = NameValidationResult(
-        is_valid   = bool(data.get("is_valid", False)),
-        first_name = (data.get("first_name") or "").strip() or stripped.split()[0].title(),
-        reason     = data.get("reason", ""),
+        is_valid=bool(data.get("is_valid", False)),
+        first_name=(data.get("first_name") or "").strip() or stripped.split()[0].title(),
+        reason=data.get("reason", ""),
     )
     log.info(
         "name_validator.result",
-        is_valid   = result.is_valid,
-        first_name = result.first_name,
+        is_valid=result.is_valid,
+        first_name=result.first_name,
     )
     return result

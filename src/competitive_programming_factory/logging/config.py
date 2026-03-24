@@ -19,10 +19,10 @@ def configure_logging(log_level: str = "INFO", json_format: bool = False) -> Non
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
 
     logging.basicConfig(
-        format = "%(message)s",
-        stream = sys.stdout,
-        level  = numeric_level,
-        force  = True,
+        format="%(message)s",
+        stream=sys.stdout,
+        level=numeric_level,
+        force=True,
     )
     logging.getLogger().setLevel(numeric_level)
 
@@ -42,10 +42,10 @@ def configure_logging(log_level: str = "INFO", json_format: bool = False) -> Non
         shared_processors.append(structlog.dev.ConsoleRenderer(colors=True))
 
     structlog.configure(
-        processors            = shared_processors,
-        wrapper_class         = structlog.stdlib.BoundLogger,
-        logger_factory        = structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use = False,
+        processors=shared_processors,
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=False,
     )
 
 

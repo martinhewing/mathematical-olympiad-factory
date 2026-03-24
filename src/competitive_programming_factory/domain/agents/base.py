@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -7,7 +8,6 @@ if TYPE_CHECKING:
 
 
 class BaseAgent(ABC):
-
     @property
     @abstractmethod
     def display_name(self) -> str:
@@ -19,7 +19,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def voice_id(self, settings: "Settings") -> str:
+    def voice_id(self, settings: Settings) -> str:
         pass
 
     @abstractmethod

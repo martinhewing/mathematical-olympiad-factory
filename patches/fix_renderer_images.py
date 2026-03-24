@@ -2,7 +2,7 @@ path = "src/competitive_programming_factory/engine/prompt_renderer.py"
 text = open(path).read()
 
 # Fix 1: call_claude accepts images
-old1 = '''def call_claude(prompt: str, max_tokens: int = 2000) -> str:
+old1 = """def call_claude(prompt: str, max_tokens: int = 2000) -> str:
     settings = get_settings()
     start    = time.perf_counter()
     try:
@@ -10,9 +10,9 @@ old1 = '''def call_claude(prompt: str, max_tokens: int = 2000) -> str:
             model      = settings.anthropic_model,
             max_tokens = max_tokens,  # default 600 in dev
             messages   = [{"role": "user", "content": prompt}],
-        )'''
+        )"""
 
-new1 = '''def call_claude(prompt: str, max_tokens: int = 2000, images: list | None = None) -> str:
+new1 = """def call_claude(prompt: str, max_tokens: int = 2000, images: list | None = None) -> str:
     settings = get_settings()
     start    = time.perf_counter()
     # Build message content — images first, then prompt text
@@ -29,23 +29,23 @@ new1 = '''def call_claude(prompt: str, max_tokens: int = 2000, images: list | No
             model      = settings.anthropic_model,
             max_tokens = max_tokens,
             messages   = [{"role": "user", "content": content}],
-        )'''
+        )"""
 
 # Fix 2: render_and_call passes images through
-old2 = '''def render_and_call(
+old2 = """def render_and_call(
     template_name: str,
     context:       dict[str, Any],
     max_tokens:    int = 2000,
 ) -> dict[str, Any]:
-    return _parse_json(call_claude(render(template_name, context), max_tokens), template_name)'''
+    return _parse_json(call_claude(render(template_name, context), max_tokens), template_name)"""
 
-new2 = '''def render_and_call(
+new2 = """def render_and_call(
     template_name: str,
     context:       dict[str, Any],
     max_tokens:    int = 2000,
     images:        list | None = None,
 ) -> dict[str, Any]:
-    return _parse_json(call_claude(render(template_name, context), max_tokens, images=images), template_name)'''
+    return _parse_json(call_claude(render(template_name, context), max_tokens, images=images), template_name)"""
 
 changes = 0
 for old, new, label in [(old1, new1, "call_claude"), (old2, new2, "render_and_call")]:
@@ -59,6 +59,7 @@ for old, new, label in [(old1, new1, "call_claude"), (old2, new2, "render_and_ca
 open(path, "w").write(text)
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

@@ -13,15 +13,19 @@ Five surgical patches to session_engine.py for the per-concept architecture:
   PATCH 5  get_state: expose concept progress fields
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found — run from repo root")
 
-src      = ENGINE.read_text()
+src = ENGINE.read_text()
 original = src
-changes  = []
+changes = []
 
 
 def _fail(patch_n: str, anchors: list[str]) -> None:
@@ -65,35 +69,35 @@ else:
 # =============================================================================
 
 P2_OLD = (
-    '    # Fix: add teach stage to dll so get_or_generate_stage works correctly\n'
-    '    dll = FactoryConversationHistory()\n'
+    "    # Fix: add teach stage to dll so get_or_generate_stage works correctly\n"
+    "    dll = FactoryConversationHistory()\n"
     '    dll.add_stage("teach_001", "teach")\n'
-    '    store.save(session_id, fsm, dll)'
+    "    store.save(session_id, fsm, dll)"
 )
 
 P2_NEW = (
-    '    # Add DLL teach stage\n'
-    '    dll = FactoryConversationHistory()\n'
+    "    # Add DLL teach stage\n"
+    "    dll = FactoryConversationHistory()\n"
     '    dll.add_stage("teach_001", "teach")\n'
-    '\n'
-    '    # ── Per-concept architecture: set concept_ids on FSM context ──────\n'
-    '    # select_concepts_for_problem() is pure Python — instant, no Claude call.\n'
-    '    # concept_ids drives is_concept_session and all subsequent routing.\n'
+    "\n"
+    "    # ── Per-concept architecture: set concept_ids on FSM context ──────\n"
+    "    # select_concepts_for_problem() is pure Python — instant, no Claude call.\n"
+    "    # concept_ids drives is_concept_session and all subsequent routing.\n"
     '    _problem = store.load_field(session_id, "problem_statement") or problem_statement\n'
-    '    _concepts = select_concepts_for_problem(_problem)\n'
-    '    fsm.context.concept_ids = [c.id for c in _concepts]\n'
-    '    log.info(\n'
+    "    _concepts = select_concepts_for_problem(_problem)\n"
+    "    fsm.context.concept_ids = [c.id for c in _concepts]\n"
+    "    log.info(\n"
     '        "session.concept_ids_set",\n'
-    '        session_id   = session_id,\n'
-    '        concept_ids  = fsm.context.concept_ids,\n'
-    '        concept_count = len(fsm.context.concept_ids),\n'
-    '    )\n'
-    '\n'
-    '    # Transition to CONCEPT_TEACH for new-architecture sessions\n'
-    '    if fsm.can_transition_to(State.CONCEPT_TEACH):\n'
+    "        session_id   = session_id,\n"
+    "        concept_ids  = fsm.context.concept_ids,\n"
+    "        concept_count = len(fsm.context.concept_ids),\n"
+    "    )\n"
+    "\n"
+    "    # Transition to CONCEPT_TEACH for new-architecture sessions\n"
+    "    if fsm.can_transition_to(State.CONCEPT_TEACH):\n"
     '        fsm.transition_to(State.CONCEPT_TEACH, trigger="session_created")\n'
-    '\n'
-    '    store.save(session_id, fsm, dll)'
+    "\n"
+    "    store.save(session_id, fsm, dll)"
 )
 
 if "concept_ids_set" in src:
@@ -103,11 +107,14 @@ elif P2_OLD in src:
     src = src.replace(P2_OLD, P2_NEW, 1)
     changes.append("PATCH 2 — create_session: concept_ids set on FSM context")
 else:
-    _fail("PATCH 2", [
-        '    dll = FactoryConversationHistory()',
-        '    dll.add_stage("teach_001", "teach")',
-        '    store.save(session_id, fsm, dll)',
-    ])
+    _fail(
+        "PATCH 2",
+        [
+            "    dll = FactoryConversationHistory()",
+            '    dll.add_stage("teach_001", "teach")',
+            "    store.save(session_id, fsm, dll)",
+        ],
+    )
 
 
 # =============================================================================
@@ -118,40 +125,40 @@ else:
 # =============================================================================
 
 P3_OLD = (
-    '    result = load_session(session_id)\n'
-    '    if not result:\n'
+    "    result = load_session(session_id)\n"
+    "    if not result:\n"
     '        raise ValueError(f"Session {session_id} not found")\n'
-    '    fsm, dll = result\n'
-    '\n'
+    "    fsm, dll = result\n"
+    "\n"
     '    label_id   = f"STAGE-{stage_n}"\n'
     '    label_name = f"Stage {stage_n}"\n'
-    '    concepts   = _concepts_for_stage(\n'
+    "    concepts   = _concepts_for_stage(\n"
     '        store.load_field(session_id, "problem_statement") or "", stage_n\n'
-    '    )\n'
-    '\n'
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}'
+    "    )\n"
+    "\n"
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}"
 )
 
 P3_NEW = (
-    '    result = load_session(session_id)\n'
-    '    if not result:\n'
+    "    result = load_session(session_id)\n"
+    "    if not result:\n"
     '        raise ValueError(f"Session {session_id} not found")\n'
-    '    fsm, dll = result\n'
-    '\n'
-    '    # ── Per-concept architecture ──────────────────────────────────────\n'
-    '    if fsm.is_concept_session:\n'
-    '        return _get_or_generate_concept_stage(session_id, stage_n, fsm, dll)\n'
-    '\n'
-    '    # ── Legacy architecture (fall-through) ────────────────────────────\n'
+    "    fsm, dll = result\n"
+    "\n"
+    "    # ── Per-concept architecture ──────────────────────────────────────\n"
+    "    if fsm.is_concept_session:\n"
+    "        return _get_or_generate_concept_stage(session_id, stage_n, fsm, dll)\n"
+    "\n"
+    "    # ── Legacy architecture (fall-through) ────────────────────────────\n"
     '    label_id   = f"STAGE-{stage_n}"\n'
     '    label_name = f"Stage {stage_n}"\n'
-    '    concepts   = _concepts_for_stage(\n'
+    "    concepts   = _concepts_for_stage(\n"
     '        store.load_field(session_id, "problem_statement") or "", stage_n\n'
-    '    )\n'
-    '\n'
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}'
+    "    )\n"
+    "\n"
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}"
 )
 
 if "_get_or_generate_concept_stage" in src:
@@ -161,12 +168,15 @@ elif P3_OLD in src:
     src = src.replace(P3_OLD, P3_NEW, 1)
     changes.append("PATCH 3 — get_or_generate_stage: per-concept routing added")
 else:
-    _fail("PATCH 3", [
-        '    result = load_session(session_id)',
-        '    label_id   = f"STAGE-{stage_n}"',
-        '    from competitive_programming_factory.domain.fsm.states import State as _State',
-        '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}',
-    ])
+    _fail(
+        "PATCH 3",
+        [
+            "    result = load_session(session_id)",
+            '    label_id   = f"STAGE-{stage_n}"',
+            "    from competitive_programming_factory.domain.fsm.states import State as _State",
+            "    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}",
+        ],
+    )
 
 
 # =============================================================================
@@ -177,19 +187,19 @@ else:
 # =============================================================================
 
 P4_OLD = (
-    '    # ── TEACH phase — run comprehension check then advance to REQUIREMENTS ──\n'
-    '    if fsm.state in {State.TEACH, State.TEACH_CHECK}:'
+    "    # ── TEACH phase — run comprehension check then advance to REQUIREMENTS ──\n"
+    "    if fsm.state in {State.TEACH, State.TEACH_CHECK}:"
 )
 
 P4_NEW = (
-    '    # ── Per-concept architecture: Alex + Jordan paths ─────────────────\n'
-    '    if fsm.is_concept_session:\n'
-    '        return _process_concept_submission(\n'
-    '            session_id, stage_n, answer, images, fsm, dll,\n'
-    '        )\n'
-    '\n'
-    '    # ── Legacy TEACH phase ────────────────────────────────────────────\n'
-    '    if fsm.state in {State.TEACH, State.TEACH_CHECK}:'
+    "    # ── Per-concept architecture: Alex + Jordan paths ─────────────────\n"
+    "    if fsm.is_concept_session:\n"
+    "        return _process_concept_submission(\n"
+    "            session_id, stage_n, answer, images, fsm, dll,\n"
+    "        )\n"
+    "\n"
+    "    # ── Legacy TEACH phase ────────────────────────────────────────────\n"
+    "    if fsm.state in {State.TEACH, State.TEACH_CHECK}:"
 )
 
 if "_process_concept_submission" in src:
@@ -199,10 +209,13 @@ elif P4_OLD in src:
     src = src.replace(P4_OLD, P4_NEW, 1)
     changes.append("PATCH 4 — process_submission: per-concept routing added")
 else:
-    _fail("PATCH 4", [
-        '    # ── TEACH phase — run comprehension check then advance to REQUIREMENTS ──',
-        '    if fsm.state in {State.TEACH, State.TEACH_CHECK}:',
-    ])
+    _fail(
+        "PATCH 4",
+        [
+            "    # ── TEACH phase — run comprehension check then advance to REQUIREMENTS ──",
+            "    if fsm.state in {State.TEACH, State.TEACH_CHECK}:",
+        ],
+    )
 
 
 # =============================================================================
@@ -214,20 +227,20 @@ else:
 P5_OLD = (
     '        "agent_name":          get_agent_for_state(fsm.state.value).display_name,\n'
     '        "agent_role":          get_agent_for_state(fsm.state.value).role_label,\n'
-    '    }'
+    "    }"
 )
 
 P5_NEW = (
     '        "agent_name":          get_agent_for_state(fsm.state.value).display_name,\n'
     '        "agent_role":          get_agent_for_state(fsm.state.value).role_label,\n'
     '        "agent":               fsm.state.agent,\n'
-    '        # Per-concept fields (non-null for concept sessions only)\n'
+    "        # Per-concept fields (non-null for concept sessions only)\n"
     '        "concept_id":          fsm.context.current_concept_id,\n'
     '        "concept_index":       fsm.context.concept_index,\n'
     '        "concepts_total":      fsm.context.concepts_total,\n'
     '        "concepts_confirmed":  fsm.context.concepts_confirmed,\n'
     '        "concepts_flagged":    fsm.context.concepts_flagged,\n'
-    '    }'
+    "    }"
 )
 
 if '"concept_id":          fsm.context.current_concept_id' in src:
@@ -237,10 +250,13 @@ elif P5_OLD in src:
     src = src.replace(P5_OLD, P5_NEW, 1)
     changes.append("PATCH 5 — get_state: concept progress fields added")
 else:
-    _fail("PATCH 5", [
-        '"agent_name":          get_agent_for_state(fsm.state.value).display_name,',
-        '"agent_role":          get_agent_for_state(fsm.state.value).role_label,',
-    ])
+    _fail(
+        "PATCH 5",
+        [
+            '"agent_name":          get_agent_for_state(fsm.state.value).display_name,',
+            '"agent_role":          get_agent_for_state(fsm.state.value).role_label,',
+        ],
+    )
 
 
 # =============================================================================
@@ -672,7 +688,9 @@ if "_get_or_generate_concept_stage" in src and "_drive_concept_fsm" in src:
     changes.append("HELPERS — already applied")
 else:
     src = src + HELPERS
-    changes.append("HELPERS — _get_or_generate_concept_stage, _process_concept_submission, _drive_concept_fsm appended")
+    changes.append(
+        "HELPERS — _get_or_generate_concept_stage, _process_concept_submission, _drive_concept_fsm appended"
+    )
 
 
 # =============================================================================

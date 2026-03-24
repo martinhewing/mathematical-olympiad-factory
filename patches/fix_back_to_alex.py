@@ -28,7 +28,7 @@ def teach_restart(session_id: str):
 
 @router.post("/session/{session_id}/teach/complete")'''
 
-if 'teach/restart' not in text:
+if "teach/restart" not in text:
     open(path, "w").write(text.replace(old, new))
     print("Fixed stages.py")
 else:

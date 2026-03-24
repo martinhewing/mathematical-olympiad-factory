@@ -50,8 +50,8 @@ log = get_logger(__name__)
 
 StatusValue = Literal["PRESENT", "PARTIAL", "MISSING", "UNKNOWN"]
 
-_MAX_IMAGES  = 4
-_MAX_RUBRIC  = 10
+_MAX_IMAGES = 4
+_MAX_RUBRIC = 10
 
 _SYSTEM_PROMPT = """\
 You are a senior staff engineer evaluating a candidate's hand-drawn system design diagram.
@@ -62,9 +62,9 @@ Return ONLY valid JSON — no preamble, no markdown fences."""
 
 @dataclass
 class DiagramScore:
-    label:  str
+    label: str
     status: StatusValue
-    notes:  str = ""
+    notes: str = ""
 
     def to_dict(self) -> dict:
         return {"label": self.label, "status": self.status, "notes": self.notes}
@@ -77,6 +77,7 @@ class DiagramEvaluationError(Exception):
 # ─────────────────────────────────────────────────────────────────────────────
 # Public entry point
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def evaluate_diagram(
     images: list[bytes],
@@ -101,8 +102,9 @@ def evaluate_diagram(
     if not images:
         log.warning("diagram_evaluator.no_images")
         return [
-            DiagramScore(label=r.get("label", f"item_{i}"), status="UNKNOWN",
-                         notes="No diagram submitted")
+            DiagramScore(
+                label=r.get("label", f"item_{i}"), status="UNKNOWN", notes="No diagram submitted"
+            )
             for i, r in enumerate(rubric[:_MAX_RUBRIC])
         ]
 
@@ -118,8 +120,11 @@ def evaluate_diagram(
     except Exception as exc:
         log.error("diagram_evaluator.failed", error=str(exc))
         return [
-            DiagramScore(label=r.get("label", f"item_{i}"), status="UNKNOWN",
-                         notes=f"Evaluation error: {type(exc).__name__}")
+            DiagramScore(
+                label=r.get("label", f"item_{i}"),
+                status="UNKNOWN",
+                notes=f"Evaluation error: {type(exc).__name__}",
+            )
             for i, r in enumerate(rubric_to_use)
         ]
 
@@ -128,9 +133,10 @@ def evaluate_diagram(
 # Claude Vision call
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _build_prompt(rubric: list[dict]) -> str:
     rubric_lines = "\n".join(
-        f"  {i+1}. [{r['label']}] "
+        f"  {i + 1}. [{r['label']}] "
         f"{'(REQUIRED) ' if r.get('required') else ''}"
         f"{r.get('description', '')}"
         for i, r in enumerate(rubric)
@@ -164,54 +170,56 @@ Return ONLY valid JSON. No preamble. No markdown fences."""
 
 
 def _call_claude_vision(
-    images:    list[bytes],
-    rubric:    list[dict],
+    images: list[bytes],
+    rubric: list[dict],
     mime_type: str,
 ) -> list[DiagramScore]:
     settings = get_settings()
-    client   = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
     # Build content: one image block per image, then the text prompt
     content: list[dict] = []
     for img_bytes in images:
         b64 = base64.standard_b64encode(img_bytes).decode("ascii")
-        content.append({
-            "type": "image",
-            "source": {
-                "type":       "base64",
-                "media_type": mime_type,
-                "data":       b64,
-            },
-        })
+        content.append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": mime_type,
+                    "data": b64,
+                },
+            }
+        )
     content.append({"type": "text", "text": _build_prompt(rubric)})
 
     start = time.perf_counter()
     try:
         response = client.messages.create(
-            model      = settings.anthropic_model,
-            max_tokens = 1024,
-            system     = _SYSTEM_PROMPT,
-            messages   = [{"role": "user", "content": content}],
+            model=settings.anthropic_model,
+            max_tokens=1024,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": content}],
         )
     except Exception as exc:
         log.error(
             "diagram_evaluator.api_error",
-            error        = str(exc),
-            image_count  = len(images),
-            rubric_count = len(rubric),
+            error=str(exc),
+            image_count=len(images),
+            rubric_count=len(rubric),
         )
         raise DiagramEvaluationError(str(exc)) from exc
 
     duration_ms = int((time.perf_counter() - start) * 1000)
-    raw_text    = response.content[0].text
+    raw_text = response.content[0].text
 
     log.info(
         "diagram_evaluator.scored",
-        image_count   = len(images),
-        rubric_count  = len(rubric),
-        duration_ms   = duration_ms,
-        input_tokens  = getattr(response.usage, "input_tokens",  0),
-        output_tokens = getattr(response.usage, "output_tokens", 0),
+        image_count=len(images),
+        rubric_count=len(rubric),
+        duration_ms=duration_ms,
+        input_tokens=getattr(response.usage, "input_tokens", 0),
+        output_tokens=getattr(response.usage, "output_tokens", 0),
     )
 
     return _parse_scores(raw_text, rubric)
@@ -245,16 +253,18 @@ def _parse_scores(raw: str, rubric: list[dict]) -> list[DiagramScore]:
 
     results: list[DiagramScore] = []
     for r in rubric:
-        label  = r.get("label", "")
+        label = r.get("label", "")
         scored = score_by_label.get(label, {})
         status = scored.get("status", "UNKNOWN")
         if status not in _VALID_STATUSES:
             status = "UNKNOWN"
-        results.append(DiagramScore(
-            label  = label,
-            status = status,   # type: ignore[arg-type]
-            notes  = scored.get("notes", ""),
-        ))
+        results.append(
+            DiagramScore(
+                label=label,
+                status=status,  # type: ignore[arg-type]
+                notes=scored.get("notes", ""),
+            )
+        )
 
     return results
 
@@ -262,6 +272,7 @@ def _parse_scores(raw: str, rubric: list[dict]) -> list[DiagramScore]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Aggregate helpers — used by session_engine to decide verdict influence
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def diagram_passes_minimum(scores: list[DiagramScore], rubric: list[dict]) -> bool:
     """
@@ -274,10 +285,7 @@ def diagram_passes_minimum(scores: list[DiagramScore], rubric: list[dict]) -> bo
         return any(s.status == "PRESENT" for s in scores)
 
     score_map = {s.label: s.status for s in scores}
-    return all(
-        score_map.get(lbl, "MISSING") in ("PRESENT", "PARTIAL")
-        for lbl in required_labels
-    )
+    return all(score_map.get(lbl, "MISSING") in ("PRESENT", "PARTIAL") for lbl in required_labels)
 
 
 def diagram_summary(scores: list[DiagramScore]) -> str:

@@ -148,6 +148,7 @@ open(path, "w").write(text)
 print(f"\nChanges: {changes}/3")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

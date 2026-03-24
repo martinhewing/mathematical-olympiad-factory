@@ -7,26 +7,32 @@ Session UI routes (/session/*/stage/*, /session/*/state, etc.) are public —
 they are browser-rendered interview pages that cannot send custom headers.
 API management routes (/sessions) remain protected.
 """
+
 from __future__ import annotations
+
 import hmac
+
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
 from competitive_programming_factory.config import get_settings
 
-_PUBLIC_PATHS = frozenset({
-    "/health",
-    "/favicon.ico",
+_PUBLIC_PATHS = frozenset(
+    {
+        "/health",
+        "/favicon.ico",
         "/favicon.png",
-    "/docs",
-    "/openapi.json",
-    "/",
-})
+        "/docs",
+        "/openapi.json",
+        "/",
+    }
+)
 
 # Browser-rendered interview UI — cannot send X-API-Key headers
 _PUBLIC_PREFIXES = (
-    "/session/",    # /session/{id}/stage/{n}, /session/{id}/state, etc.
-    "/sessions/",   # /sessions/{id}/voice — browser UI page
+    "/session/",  # /session/{id}/stage/{n}, /session/{id}/state, etc.
+    "/sessions/",  # /sessions/{id}/voice — browser UI page
 )
 
 
@@ -43,13 +49,13 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         key = request.headers.get("X-API-Key", "")
         if not key:
             return JSONResponse(
-                status_code = 401,
-                content     = {"detail": "X-API-Key header required"},
+                status_code=401,
+                content={"detail": "X-API-Key header required"},
             )
         if not _verify_key(key):
             return JSONResponse(
-                status_code = 403,
-                content     = {"detail": "Invalid API key"},
+                status_code=403,
+                content={"detail": "Invalid API key"},
             )
         return await call_next(request)
 

@@ -17,15 +17,19 @@ Two patches to src/competitive_programming_factory/routes/stages.py:
   PATCH 3  teach/restart: also handles CONCEPT_TEACH state.
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 STAGES = pathlib.Path("src/competitive_programming_factory/routes/stages.py")
 if not STAGES.exists():
     sys.exit(f"ERROR: {STAGES} not found — run from repo root")
 
-src      = STAGES.read_text()
+src = STAGES.read_text()
 original = src
-changes  = []
+changes = []
 
 
 def _fail(patch_n: str, anchors: list[str]) -> None:
@@ -45,7 +49,7 @@ P1_OLD = (
     '        "greeting":          spec.get("greeting", ""),\n'
     '        "agent_name":        state.get("agent_name", ""),\n'
     '        "agent_role":        state.get("agent_role", ""),\n'
-    '    }'
+    "    }"
 )
 
 P1_NEW = (
@@ -55,7 +59,7 @@ P1_NEW = (
     '        "greeting":          spec.get("greeting", ""),\n'
     '        "agent_name":        state.get("agent_name", ""),\n'
     '        "agent_role":        state.get("agent_role", ""),\n'
-    '        # Per-concept fields (populated for concept-architecture sessions)\n'
+    "        # Per-concept fields (populated for concept-architecture sessions)\n"
     '        "agent":             state.get("agent", spec.get("agent", "")),\n'
     '        "concept_id":        state.get("concept_id", spec.get("concept_id", "")),\n'
     '        "scene_hook":        spec.get("scene_hook", ""),\n'
@@ -65,7 +69,7 @@ P1_NEW = (
     '        "concepts_total":    state.get("concepts_total", 0),\n'
     '        "concepts_confirmed":state.get("concepts_confirmed", []),\n'
     '        "reteach_count":     result[0].context.reteach_count if result else 0,\n'
-    '    }'
+    "    }"
 )
 
 if "scene_hook" in src and "solicit_drawing" in src:
@@ -75,11 +79,14 @@ elif P1_OLD in src:
     src = src.replace(P1_OLD, P1_NEW, 1)
     changes.append("PATCH 1 — GET stage: concept fields added to response")
 else:
-    _fail("PATCH 1", [
-        '        "comprehension_check": spec.get("comprehension_check", ""),',
-        '        "concepts":          spec.get("concepts", []),',
-        '        "agent_name":        state.get("agent_name", ""),',
-    ])
+    _fail(
+        "PATCH 1",
+        [
+            '        "comprehension_check": spec.get("comprehension_check", ""),',
+            '        "concepts":          spec.get("concepts", []),',
+            '        "agent_name":        state.get("agent_name", ""),',
+        ],
+    )
 
 
 # =============================================================================
@@ -163,16 +170,16 @@ else:
 # =============================================================================
 
 P3_OLD = (
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:'
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:"
 )
 
 P3_NEW = (
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    if fsm.state in {\n'
-    '        _State.TEACH, _State.TEACH_CHECK,\n'
-    '        _State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK, _State.CONCEPT_STAGE,\n'
-    '    }:'
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    if fsm.state in {\n"
+    "        _State.TEACH, _State.TEACH_CHECK,\n"
+    "        _State.CONCEPT_TEACH, _State.CONCEPT_TEACH_CHECK, _State.CONCEPT_STAGE,\n"
+    "    }:"
 )
 
 if "_State.CONCEPT_TEACH," in src:
@@ -182,10 +189,13 @@ elif P3_OLD in src:
     src = src.replace(P3_OLD, P3_NEW, 1)
     changes.append("PATCH 3 — teach/restart: handles CONCEPT_TEACH/CHECK/STAGE states")
 else:
-    _fail("PATCH 3", [
-        '    from competitive_programming_factory.domain.fsm.states import State as _State',
-        '    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:',
-    ])
+    _fail(
+        "PATCH 3",
+        [
+            "    from competitive_programming_factory.domain.fsm.states import State as _State",
+            "    if fsm.state in {_State.TEACH, _State.TEACH_CHECK}:",
+        ],
+    )
 
 
 # =============================================================================

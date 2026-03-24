@@ -3,7 +3,9 @@ text = open(path).read()
 
 # Fix 1: Add playedAudio tracker after SESSION_ID
 old1 = "  const SESSION_ID = window.location.pathname.split('/')[2];"
-new1 = "  const SESSION_ID = window.location.pathname.split('/')[2];\n  const playedAudio = new Set();"
+new1 = (
+    "  const SESSION_ID = window.location.pathname.split('/')[2];\n  const playedAudio = new Set();"
+)
 
 # Fix 2: Skip audio if already played
 old2 = "    // Enable record button immediately\n    enableRecording();\n    // Only play audio once per stage+phase combination\n    const audioKey = (stageData.phase || 'interview') + ':' + n;\n    if (!playedAudio.has(audioKey)) {{\n      playedAudio.add(audioKey);\n      playStageAudio(n);\n    }}"
@@ -44,7 +46,6 @@ else:
         print(f"  {i}: {repr(l)}")
 
 # Fix 2: wrap playStageAudio call with playedAudio check
-import re
 # Find the simple playStageAudio(n) call after enableRecording in loadStage
 old2_simple = "    enableRecording();\n    // Play audio in background\n    playStageAudio(n);"
 new2_simple = """    enableRecording();
@@ -68,6 +69,7 @@ open(path, "w").write(text)
 print(f"\nTotal changes: {changes}")
 
 import py_compile
+
 try:
     py_compile.compile(path, doraise=True)
     print("✓ Syntax OK")

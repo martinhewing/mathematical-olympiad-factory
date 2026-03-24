@@ -7,9 +7,9 @@ Called by Scalar to show current FSM position.
 
 from fastapi import APIRouter, HTTPException
 
+import competitive_programming_factory.session_store as store
 from competitive_programming_factory.engine import session_engine as engine
 from competitive_programming_factory.models.schemas import StateResponse
-import competitive_programming_factory.session_store as store
 
 router = APIRouter(tags=["state"])
 

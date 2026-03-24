@@ -26,79 +26,85 @@ class FactoryNode:
     """A single stage in the factory session conversation."""
 
     def __init__(self, stage_id: str, stage_type: str) -> None:
-        self.stage_id   = stage_id
+        self.stage_id = stage_id
         self.stage_type = stage_type
-        self.timestamp  = datetime.now()
-        self.status     = "active"    # active | confirmed | flagged | skipped
+        self.timestamp = datetime.now()
+        self.status = "active"  # active | confirmed | flagged | skipped
 
         self.prev: FactoryNode | None = None
         self.next: FactoryNode | None = None
 
-        self.turns:             list[dict[str, Any]] = []
+        self.turns: list[dict[str, Any]] = []
         self.voice_transcripts: list[dict[str, Any]] = []
-        self.silence_events:    list[dict[str, Any]] = []
-        self.ink_patterns_used: list[str]            = []
+        self.silence_events: list[dict[str, Any]] = []
+        self.ink_patterns_used: list[str] = []
 
-        self.spec:                 dict | None = None
-        self.assessments:          list[dict]  = []
+        self.spec: dict | None = None
+        self.assessments: list[dict] = []
         self.comprehension_record: dict | None = None
-        self.summary:              str         = ""
+        self.summary: str = ""
 
-        self.label_id:      str              = ""
-        self.node_id:       str              = ""
-        self.confirmed_at:  datetime | None  = None
-        self.flagged_at:    datetime | None  = None
+        self.label_id: str = ""
+        self.node_id: str = ""
+        self.confirmed_at: datetime | None = None
+        self.flagged_at: datetime | None = None
 
     # ── Turn management ───────────────────────────────────────────────────
 
     def add_turn(
         self,
-        speaker:     str,
-        content:     str,
-        turn_type:   str = "",
+        speaker: str,
+        content: str,
+        turn_type: str = "",
         ink_pattern: str = "",
         **extra: Any,
     ) -> None:
-        self.turns.append({
-            "timestamp":   datetime.now().isoformat(),
-            "speaker":     speaker,
-            "content":     content,
-            "turn_type":   turn_type,
-            "ink_pattern": ink_pattern,
-            **extra,
-        })
+        self.turns.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "speaker": speaker,
+                "content": content,
+                "turn_type": turn_type,
+                "ink_pattern": ink_pattern,
+                **extra,
+            }
+        )
 
     def add_voice_transcript(
         self,
-        transcript:  str,
-        audio_url:   str   = "",
-        duration_ms: int   = 0,
-        confidence:  float = 0.0,
+        transcript: str,
+        audio_url: str = "",
+        duration_ms: int = 0,
+        confidence: float = 0.0,
     ) -> None:
-        self.voice_transcripts.append({
-            "timestamp":   datetime.now().isoformat(),
-            "transcript":  transcript,
-            "audio_url":   audio_url,
-            "duration_ms": duration_ms,
-            "confidence":  confidence,
-        })
+        self.voice_transcripts.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "transcript": transcript,
+                "audio_url": audio_url,
+                "duration_ms": duration_ms,
+                "confidence": confidence,
+            }
+        )
         self.add_turn("candidate", transcript, turn_type="voice", audio_url=audio_url)
 
     def add_silence_event(self, silence_type: str, duration_ms: int) -> None:
-        self.silence_events.append({
-            "timestamp":    datetime.now().isoformat(),
-            "silence_type": silence_type,
-            "duration_ms":  duration_ms,
-        })
+        self.silence_events.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "silence_type": silence_type,
+                "duration_ms": duration_ms,
+            }
+        )
 
-    def confirm(self, comprehension_record: dict | None = None) -> "FactoryNode":
-        self.status               = "confirmed"
-        self.confirmed_at         = datetime.now()
+    def confirm(self, comprehension_record: dict | None = None) -> FactoryNode:
+        self.status = "confirmed"
+        self.confirmed_at = datetime.now()
         self.comprehension_record = comprehension_record
         return self
 
     def flag(self, reason: str) -> None:
-        self.status     = "flagged"
+        self.status = "flagged"
         self.flagged_at = datetime.now()
         self.add_turn("system", f"Stage flagged: {reason}", turn_type="system")
 
@@ -121,40 +127,40 @@ class FactoryNode:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "stage_id":             self.stage_id,
-            "stage_type":           self.stage_type,
-            "timestamp":            self.timestamp.isoformat(),
-            "status":               self.status,
-            "prev":                 self.prev.stage_id if self.prev else None,
-            "next":                 self.next.stage_id if self.next else None,
-            "turns":                self.turns,
-            "voice_transcripts":    self.voice_transcripts,
-            "silence_events":       self.silence_events,
-            "ink_patterns_used":    self.ink_patterns_used,
-            "spec":                 self.spec,
-            "assessments":          self.assessments,
+            "stage_id": self.stage_id,
+            "stage_type": self.stage_type,
+            "timestamp": self.timestamp.isoformat(),
+            "status": self.status,
+            "prev": self.prev.stage_id if self.prev else None,
+            "next": self.next.stage_id if self.next else None,
+            "turns": self.turns,
+            "voice_transcripts": self.voice_transcripts,
+            "silence_events": self.silence_events,
+            "ink_patterns_used": self.ink_patterns_used,
+            "spec": self.spec,
+            "assessments": self.assessments,
             "comprehension_record": self.comprehension_record,
-            "summary":              self.summary,
-            "label_id":             self.label_id,
-            "node_id":              self.node_id,
-            "confirmed_at":         self.confirmed_at.isoformat() if self.confirmed_at else None,
-            "flagged_at":           self.flagged_at.isoformat()   if self.flagged_at   else None,
+            "summary": self.summary,
+            "label_id": self.label_id,
+            "node_id": self.node_id,
+            "confirmed_at": self.confirmed_at.isoformat() if self.confirmed_at else None,
+            "flagged_at": self.flagged_at.isoformat() if self.flagged_at else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FactoryNode:
         node = cls(stage_id=data["stage_id"], stage_type=data["stage_type"])
-        node.status               = data.get("status", "active")
-        node.turns                = data.get("turns", [])
-        node.voice_transcripts    = data.get("voice_transcripts", [])
-        node.silence_events       = data.get("silence_events", [])
-        node.ink_patterns_used    = data.get("ink_patterns_used", [])
-        node.spec                 = data.get("spec")
-        node.assessments          = data.get("assessments", [])
+        node.status = data.get("status", "active")
+        node.turns = data.get("turns", [])
+        node.voice_transcripts = data.get("voice_transcripts", [])
+        node.silence_events = data.get("silence_events", [])
+        node.ink_patterns_used = data.get("ink_patterns_used", [])
+        node.spec = data.get("spec")
+        node.assessments = data.get("assessments", [])
         node.comprehension_record = data.get("comprehension_record")
-        node.summary              = data.get("summary", "")
-        node.label_id             = data.get("label_id", "")
-        node.node_id              = data.get("node_id", "")
+        node.summary = data.get("summary", "")
+        node.label_id = data.get("label_id", "")
+        node.node_id = data.get("node_id", "")
 
         ts = data.get("timestamp")
         if ts:
@@ -181,10 +187,10 @@ class FactoryConversationHistory:
     """
 
     def __init__(self) -> None:
-        self.head:    FactoryNode | None = None
-        self.tail:    FactoryNode | None = None
+        self.head: FactoryNode | None = None
+        self.tail: FactoryNode | None = None
         self.current: FactoryNode | None = None
-        self.size:    int = 0
+        self.size: int = 0
 
     def add_stage(self, stage_id: str, stage_type: str) -> FactoryNode:
         node = FactoryNode(stage_id=stage_id, stage_type=stage_type)
@@ -193,12 +199,12 @@ class FactoryConversationHistory:
             self.head = node
             self.tail = node
         else:
-            node.prev      = self.head
+            node.prev = self.head
             self.head.next = node
-            self.head      = node
+            self.head = node
 
         self.current = node
-        self.size   += 1
+        self.size += 1
         return node
 
     def find(self, stage_id: str) -> FactoryNode | None:
@@ -240,29 +246,35 @@ class FactoryConversationHistory:
             context.extend(self.current.turns[-max_turns:])
 
         if self.current and self.current.prev and self.current.prev.summary:
-            context.insert(0, {
-                "speaker":   "system",
-                "content":   (
-                    f"[Previous stage: {self.current.prev.stage_type} "
-                    f"({self.current.prev.stage_id})] "
-                    f"{self.current.prev.summary}"
-                ),
-                "turn_type": "system",
-            })
+            context.insert(
+                0,
+                {
+                    "speaker": "system",
+                    "content": (
+                        f"[Previous stage: {self.current.prev.stage_type} "
+                        f"({self.current.prev.stage_id})] "
+                        f"{self.current.prev.summary}"
+                    ),
+                    "turn_type": "system",
+                },
+            )
 
         for node in self.iterate_oldest_first():
             if node.comprehension_record and node != self.current:
                 rec = node.comprehension_record
-                context.insert(0, {
-                    "speaker":   "system",
-                    "content":   (
-                        f"[Confirmed: {rec.get('label_id', node.label_id)}] "
-                        f"Concepts demonstrated: "
-                        f"{', '.join(rec.get('concepts_demonstrated', []))}. "
-                        f"{rec.get('evidence_summary', '')}"
-                    ),
-                    "turn_type": "system",
-                })
+                context.insert(
+                    0,
+                    {
+                        "speaker": "system",
+                        "content": (
+                            f"[Confirmed: {rec.get('label_id', node.label_id)}] "
+                            f"Concepts demonstrated: "
+                            f"{', '.join(rec.get('concepts_demonstrated', []))}. "
+                            f"{rec.get('evidence_summary', '')}"
+                        ),
+                        "turn_type": "system",
+                    },
+                )
 
         return context
 
@@ -303,11 +315,11 @@ class FactoryConversationHistory:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "head":    self.head.stage_id    if self.head    else None,
-            "tail":    self.tail.stage_id    if self.tail    else None,
+            "head": self.head.stage_id if self.head else None,
+            "tail": self.tail.stage_id if self.tail else None,
             "current": self.current.stage_id if self.current else None,
-            "size":    self.size,
-            "nodes":   [node.to_dict() for node in self.iterate_oldest_first()],
+            "size": self.size,
+            "nodes": [node.to_dict() for node in self.iterate_oldest_first()],
         }
 
     @classmethod
@@ -323,7 +335,7 @@ class FactoryConversationHistory:
             nodes_by_id[node.stage_id] = node
 
         for node_data in data["nodes"]:
-            node    = nodes_by_id[node_data["stage_id"]]
+            node = nodes_by_id[node_data["stage_id"]]
             prev_id = node_data.get("prev")
             next_id = node_data.get("next")
             if prev_id and prev_id in nodes_by_id:
@@ -331,10 +343,10 @@ class FactoryConversationHistory:
             if next_id and next_id in nodes_by_id:
                 node.next = nodes_by_id[next_id]
 
-        if data.get("tail")    and data["tail"]    in nodes_by_id:
-            history.tail    = nodes_by_id[data["tail"]]
-        if data.get("head")    and data["head"]    in nodes_by_id:
-            history.head    = nodes_by_id[data["head"]]
+        if data.get("tail") and data["tail"] in nodes_by_id:
+            history.tail = nodes_by_id[data["tail"]]
+        if data.get("head") and data["head"] in nodes_by_id:
+            history.head = nodes_by_id[data["head"]]
         if data.get("current") and data["current"] in nodes_by_id:
             history.current = nodes_by_id[data["current"]]
 

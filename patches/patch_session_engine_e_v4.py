@@ -11,15 +11,19 @@ Four patches:
   PATCH 4 — thread diagram_request + diagram_scores through AssessmentResponse
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found. Run from repo root.")
 
-src      = ENGINE.read_text()
+src = ENGINE.read_text()
 original = src
-changes  = []
+changes = []
 
 
 # =============================================================================
@@ -49,9 +53,9 @@ else:
 # =============================================================================
 
 OLD_P2 = (
-    '    # Fetch concepts accumulated across prior turns this stage\n'
-    '    accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))\n'
-    '\n'
+    "    # Fetch concepts accumulated across prior turns this stage\n"
+    "    accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))\n"
+    "\n"
     '    raw = render_and_call("assess_submission.j2", {\n'
     '        "problem_statement":     store.load_field(session_id, "problem_statement"),\n'
     '        "candidate_level":       store.load_field(session_id, "candidate_level"),\n'
@@ -71,42 +75,42 @@ OLD_P2 = (
     '        "probe_limit":           probe_limit,\n'
     '        "probe_history":         probe_history,\n'
     '        "candidate_answer":      answer,\n'
-    '    }, images=images or [])'
+    "    }, images=images or [])"
 )
 
 NEW_P2 = (
-    '    # Fetch concepts accumulated across prior turns this stage\n'
-    '    accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))\n'
-    '\n'
-    '    # ── Diagram evaluation (runs before assess_submission.j2) ────────────\n'
+    "    # Fetch concepts accumulated across prior turns this stage\n"
+    "    accumulated_this_stage = sorted(get_accumulated_concepts(session_id, stage_n))\n"
+    "\n"
+    "    # ── Diagram evaluation (runs before assess_submission.j2) ────────────\n"
     '    pending_rubric  = store.load_field(session_id, f"pending_diagram_rubric_{stage_n}") or []\n'
-    '    diagram_scores: list[dict] = []\n'
-    '    if images and pending_rubric:\n'
-    '        raw_scores     = evaluate_diagram(images, pending_rubric)\n'
-    '        diagram_scores = [s.to_dict() for s in raw_scores]\n'
-    '        diagram_pass   = diagram_passes_minimum(raw_scores, pending_rubric)\n'
-    '        log.info(\n'
+    "    diagram_scores: list[dict] = []\n"
+    "    if images and pending_rubric:\n"
+    "        raw_scores     = evaluate_diagram(images, pending_rubric)\n"
+    "        diagram_scores = [s.to_dict() for s in raw_scores]\n"
+    "        diagram_pass   = diagram_passes_minimum(raw_scores, pending_rubric)\n"
+    "        log.info(\n"
     '            "diagram.evaluated",\n'
-    '            session_id = session_id,\n'
-    '            stage_n    = stage_n,\n'
-    '            summary    = diagram_summary(raw_scores),\n'
-    '            passes     = diagram_pass,\n'
-    '        )\n'
-    '\n'
-    '    # ── Curriculum concepts for Jordan probing guide ──────────────────────\n'
-    '    all_concept_ids = (\n'
+    "            session_id = session_id,\n"
+    "            stage_n    = stage_n,\n"
+    "            summary    = diagram_summary(raw_scores),\n"
+    "            passes     = diagram_pass,\n"
+    "        )\n"
+    "\n"
+    "    # ── Curriculum concepts for Jordan probing guide ──────────────────────\n"
+    "    all_concept_ids = (\n"
     '        spec.get("all_concept_ids")\n'
     '        or spec.get("concepts_tested")\n'
-    '        or []\n'
-    '    )\n'
-    '    curriculum_concepts: list[dict] = []\n'
-    '    if all_concept_ids:\n'
-    '        try:\n'
-    '            from competitive_programming_factory.curriculum import CONCEPT_BY_ID\n'
-    '            for cid in all_concept_ids:\n'
-    '                c = CONCEPT_BY_ID.get(cid)\n'
-    '                if c:\n'
-    '                    curriculum_concepts.append({\n'
+    "        or []\n"
+    "    )\n"
+    "    curriculum_concepts: list[dict] = []\n"
+    "    if all_concept_ids:\n"
+    "        try:\n"
+    "            from competitive_programming_factory.curriculum import CONCEPT_BY_ID\n"
+    "            for cid in all_concept_ids:\n"
+    "                c = CONCEPT_BY_ID.get(cid)\n"
+    "                if c:\n"
+    "                    curriculum_concepts.append({\n"
     '                        "concept_id":         c.id,\n'
     '                        "name":               c.name,\n'
     '                        "solicit_drawing":    c.solicit_drawing,\n'
@@ -116,12 +120,12 @@ NEW_P2 = (
     '                        "drawing_rubric": [\n'
     '                            {"label": r.label, "description": r.description,\n'
     '                             "required": r.required}\n'
-    '                            for r in c.drawing_rubric\n'
-    '                        ],\n'
-    '                    })\n'
-    '        except Exception as _e:\n'
+    "                            for r in c.drawing_rubric\n"
+    "                        ],\n"
+    "                    })\n"
+    "        except Exception as _e:\n"
     '            log.warning("session_engine.curriculum_lookup_failed", error=str(_e))\n'
-    '\n'
+    "\n"
     '    raw = render_and_call("assess_submission.j2", {\n'
     '        "problem_statement":     store.load_field(session_id, "problem_statement"),\n'
     '        "candidate_level":       store.load_field(session_id, "candidate_level"),\n'
@@ -141,11 +145,11 @@ NEW_P2 = (
     '        "probe_limit":           probe_limit,\n'
     '        "probe_history":         probe_history,\n'
     '        "candidate_answer":      answer,\n'
-    '        # E) diagram fields\n'
+    "        # E) diagram fields\n"
     '        "has_candidate_diagram": bool(images),\n'
     '        "curriculum_concepts":   curriculum_concepts,\n'
     '        "diagram_scores":        diagram_scores,\n'
-    '    }, images=images or [])'
+    "    }, images=images or [])"
 )
 
 if "has_candidate_diagram" in src:
@@ -157,11 +161,11 @@ elif OLD_P2 in src:
 else:
     print("\nDEBUG — PATCH 2 anchors:")
     for a in [
-        '# Fetch concepts accumulated across prior turns this stage',
-        'accumulated_this_stage = sorted(get_accumulated_concepts',
+        "# Fetch concepts accumulated across prior turns this stage",
+        "accumulated_this_stage = sorted(get_accumulated_concepts",
         '"accumulated_concepts":  accumulated_this_stage,',
         '"candidate_answer":      answer,',
-        '}, images=images or [])',
+        "}, images=images or [])",
     ]:
         print(f"  {'FOUND' if a in src else 'MISSING'}  {a!r}")
     sys.exit("\nPATCH 2 FAILED — paste DEBUG output as a reply")
@@ -174,31 +178,31 @@ else:
 
 OLD_P3 = (
     '    confidence_scores     = raw.get("confidence_scores", {})\n'
-    '\n'
-    '    # ── Concept accumulation (semilattice) ────────────────────────────\n'
+    "\n"
+    "    # ── Concept accumulation (semilattice) ────────────────────────────\n"
 )
 
 NEW_P3 = (
     '    confidence_scores     = raw.get("confidence_scores", {})\n'
-    '\n'
-    '    # ── diagram_request: extract + persist rubric for next submission ──\n'
+    "\n"
+    "    # ── diagram_request: extract + persist rubric for next submission ──\n"
     '    diagram_request: dict | None = raw.get("diagram_request")\n'
-    '    if isinstance(diagram_request, dict) and diagram_request:\n'
+    "    if isinstance(diagram_request, dict) and diagram_request:\n"
     '        pending = diagram_request.get("rubric") or []\n'
     '        store.save_field(session_id, f"pending_diagram_rubric_{stage_n}", pending)\n'
-    '        log.info(\n'
+    "        log.info(\n"
     '            "diagram.request_fired",\n'
-    '            session_id   = session_id,\n'
-    '            stage_n      = stage_n,\n'
+    "            session_id   = session_id,\n"
+    "            stage_n      = stage_n,\n"
     '            concept_id   = diagram_request.get("concept_id", ""),\n'
     '            required     = diagram_request.get("required", False),\n'
-    '            rubric_items = len(pending),\n'
-    '        )\n'
-    '    else:\n'
-    '        diagram_request = None\n'
+    "            rubric_items = len(pending),\n"
+    "        )\n"
+    "    else:\n"
+    "        diagram_request = None\n"
     '        store.save_field(session_id, f"pending_diagram_rubric_{stage_n}", [])\n'
-    '\n'
-    '    # ── Concept accumulation (semilattice) ────────────────────────────\n'
+    "\n"
+    "    # ── Concept accumulation (semilattice) ────────────────────────────\n"
 )
 
 if "diagram_request: dict | None = raw.get" in src:
@@ -211,7 +215,7 @@ else:
     print("\nDEBUG — PATCH 3 anchors:")
     for a in [
         '    confidence_scores     = raw.get("confidence_scores", {})',
-        '    # ── Concept accumulation (semilattice) ────────────────────────────',
+        "    # ── Concept accumulation (semilattice) ────────────────────────────",
     ]:
         print(f"  {'FOUND' if a in src else 'MISSING'}  {a!r}")
     sys.exit("\nPATCH 3 FAILED — paste DEBUG output as a reply")
@@ -222,41 +226,41 @@ else:
 # =============================================================================
 
 OLD_P4 = (
-    '    return AssessmentResponse(\n'
-    '        verdict               = verdict,\n'
-    '        feedback              = feedback,\n'
+    "    return AssessmentResponse(\n"
+    "        verdict               = verdict,\n"
+    "        feedback              = feedback,\n"
     '        probe                 = probe if verdict == "PARTIAL" else None,\n'
-    '        concepts_demonstrated = concepts_demonstrated,\n'
-    '        concepts_missing      = concepts_missing,\n'
-    '        next_url              = next_url,\n'
-    '        session_complete      = fsm.state == State.SESSION_COMPLETE,\n'
-    '    )'
+    "        concepts_demonstrated = concepts_demonstrated,\n"
+    "        concepts_missing      = concepts_missing,\n"
+    "        next_url              = next_url,\n"
+    "        session_complete      = fsm.state == State.SESSION_COMPLETE,\n"
+    "    )"
 )
 
 OLD_P4b = (
-    '    return AssessmentResponse(\n'
-    '        verdict               = verdict,\n'
-    '        feedback              = feedback,\n'
+    "    return AssessmentResponse(\n"
+    "        verdict               = verdict,\n"
+    "        feedback              = feedback,\n"
     '        probe                 = probe if verdict == "PARTIAL" else None,\n'
-    '        concepts_demonstrated = concepts_demonstrated,\n'
-    '        concepts_missing      = concepts_missing,\n'
-    '        next_url              = next_url,\n'
-    '        session_complete      = fsm.state == State.SESSION_COMPLETE\n'
-    '    )'
+    "        concepts_demonstrated = concepts_demonstrated,\n"
+    "        concepts_missing      = concepts_missing,\n"
+    "        next_url              = next_url,\n"
+    "        session_complete      = fsm.state == State.SESSION_COMPLETE\n"
+    "    )"
 )
 
 NEW_P4 = (
-    '    return AssessmentResponse(\n'
-    '        verdict               = verdict,\n'
-    '        feedback              = feedback,\n'
+    "    return AssessmentResponse(\n"
+    "        verdict               = verdict,\n"
+    "        feedback              = feedback,\n"
     '        probe                 = probe if verdict == "PARTIAL" else None,\n'
-    '        concepts_demonstrated = concepts_demonstrated,\n'
-    '        concepts_missing      = concepts_missing,\n'
-    '        next_url              = next_url,\n'
-    '        session_complete      = fsm.state == State.SESSION_COMPLETE,\n'
-    '        diagram_request       = diagram_request,\n'
-    '        diagram_scores        = diagram_scores,\n'
-    '    )'
+    "        concepts_demonstrated = concepts_demonstrated,\n"
+    "        concepts_missing      = concepts_missing,\n"
+    "        next_url              = next_url,\n"
+    "        session_complete      = fsm.state == State.SESSION_COMPLETE,\n"
+    "        diagram_request       = diagram_request,\n"
+    "        diagram_scores        = diagram_scores,\n"
+    "    )"
 )
 
 if "diagram_request       = diagram_request" in src:
@@ -270,9 +274,9 @@ elif OLD_P4b in src:
     changes.append("PATCH 4 — AssessmentResponse: diagram fields added (alt form)")
 else:
     print("\nDEBUG — PATCH 4: actual AssessmentResponse return block:")
-    idx = src.find('    return AssessmentResponse(')
+    idx = src.find("    return AssessmentResponse(")
     if idx != -1:
-        print(repr(src[idx:idx+500]))
+        print(repr(src[idx : idx + 500]))
     else:
         print("  'return AssessmentResponse(' not found at all")
     sys.exit("\nPATCH 4 FAILED — paste DEBUG output as a reply")

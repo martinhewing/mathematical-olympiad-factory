@@ -10,15 +10,19 @@ Applies 3 patches:
   PATCH 3 — pass minimum_bar + comprehension_check into teach_check.j2
 """
 
-import pathlib, py_compile, sys, tempfile, os
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 ENGINE = pathlib.Path("src/competitive_programming_factory/engine/session_engine.py")
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found. Run from repo root.")
 
-src      = ENGINE.read_text()
+src = ENGINE.read_text()
 original = src
-changes  = []
+changes = []
 
 # =============================================================================
 # PATCH 1 — import build_teach_spec
@@ -66,10 +70,10 @@ else:
 # =============================================================================
 
 OLD_P2 = (
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n'
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n"
     '    template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"\n'
-    '    ctx = {\n'
+    "    ctx = {\n"
     '        "problem_statement":    store.load_field(session_id, "problem_statement"),\n'
     '        "candidate_level":      store.load_field(session_id, "candidate_level"),\n'
     '        "candidate_first_name": store.load_field(session_id, "candidate_first_name") or "there",\n'
@@ -82,25 +86,25 @@ OLD_P2 = (
     '        "label_id":             label_id,\n'
     '        "label_name":           label_name,\n'
     '        "concepts":             concepts,\n'
-    '    }\n'
-    '    spec = render_and_call(template, ctx)'
+    "    }\n"
+    "    spec = render_and_call(template, ctx)"
 )
 
 NEW_P2 = (
-    '    from competitive_programming_factory.domain.fsm.states import State as _State\n'
-    '    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n'
-    '\n'
-    '    if is_teach:\n'
-    '        # Curriculum-backed: skeleton from curriculum.py, enriched by Claude.\n'
-    '        spec = build_teach_spec(\n'
-    '            session_id           = session_id,\n'
+    "    from competitive_programming_factory.domain.fsm.states import State as _State\n"
+    "    is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}\n"
+    "\n"
+    "    if is_teach:\n"
+    "        # Curriculum-backed: skeleton from curriculum.py, enriched by Claude.\n"
+    "        spec = build_teach_spec(\n"
+    "            session_id           = session_id,\n"
     '            candidate_first_name = store.load_field(session_id, "candidate_first_name") or "there",\n'
     '            candidate_level      = store.load_field(session_id, "candidate_level") or "senior",\n'
     '            problem_statement    = store.load_field(session_id, "problem_statement") or "",\n'
-    '        )\n'
-    '    else:\n'
-    '        # Jordan stage: fully dynamic, unchanged.\n'
-    '        ctx = {\n'
+    "        )\n"
+    "    else:\n"
+    "        # Jordan stage: fully dynamic, unchanged.\n"
+    "        ctx = {\n"
     '            "problem_statement":    store.load_field(session_id, "problem_statement"),\n'
     '            "candidate_level":      store.load_field(session_id, "candidate_level"),\n'
     '            "candidate_first_name": store.load_field(session_id, "candidate_first_name") or "there",\n'
@@ -113,8 +117,8 @@ NEW_P2 = (
     '            "label_id":             label_id,\n'
     '            "label_name":           label_name,\n'
     '            "concepts":             concepts,\n'
-    '        }\n'
-    '        spec = render_and_call(template, ctx)'
+    "        }\n"
+    "        spec = render_and_call(template, ctx)"
 )
 
 if OLD_P2 in src:
@@ -124,11 +128,11 @@ else:
     # Print a diff hint to help debug further mismatches
     print("\nDEBUG — scanning for partial match:")
     anchors = [
-        'is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}',
+        "is_teach = fsm.state in {_State.TEACH, _State.TEACH_CHECK}",
         'template  = "teach_lesson.j2" if is_teach else "generate_stage.j2"',
         '"stage_number":         stage_n,',
         '"label_name":           label_name,',
-        'spec = render_and_call(template, ctx)',
+        "spec = render_and_call(template, ctx)",
     ]
     for a in anchors:
         found = a in src
@@ -155,7 +159,7 @@ OLD_P3 = (
     '            "candidate_first_name": first_name,\n'
     '            "candidate_answer":  answer,\n'
     '            "lesson_summary":    spec.get("ready_summary", ""),\n'
-    '        })'
+    "        })"
 )
 
 NEW_P3 = (
@@ -166,7 +170,7 @@ NEW_P3 = (
     '            "lesson_summary":      spec.get("ready_summary", ""),\n'
     '            "minimum_bar":         spec.get("minimum_bar", ""),\n'
     '            "comprehension_check": spec.get("comprehension_check", ""),\n'
-    '        })'
+    "        })"
 )
 
 if OLD_P3 in src:

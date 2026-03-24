@@ -9,11 +9,16 @@ Fixes the 3 remaining failures from patch_cp_factory.py:
 Run from competitive-programming-factory repo root:
     python3 fix_cp_remaining.py
 """
-import pathlib, py_compile, sys, tempfile, os
+
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
 
 ROOT = pathlib.Path(".")
-SRC  = ROOT / "src/competitive_programming_factory"
-changes  = []
+SRC = ROOT / "src/competitive_programming_factory"
+changes = []
 failures = []
 
 
@@ -44,7 +49,7 @@ ENGINE = SRC / "engine/session_engine.py"
 if not ENGINE.exists():
     sys.exit(f"ERROR: {ENGINE} not found")
 
-src      = ENGINE.read_text()
+src = ENGINE.read_text()
 original = src
 
 if "conversation_history" in src:
@@ -55,23 +60,22 @@ else:
     # Look for probe_history (however it is constructed) and append after it.
     # The CP engine builds probe_history as a list comprehension; we find the
     # closing line of that block.
-    import re
     # Find probe_history assignment block end
     # Pattern: "    ]\n\n    raw = render_and_call" or "    ]\n\n    # Fetch"
     # We insert the conversation_history block right before raw = render_and_call
     INJECT_ANCHOR = '    raw = render_and_call("assess_submission.j2",'
     CONVERSATION_BLOCK = (
-        '    # Build stateful conversation history for assess_submission.j2.\n'
-        '    # Required to continue thread after off-topic turns.\n'
-        '    # NOTE: assessment and teach turns excluded — they inject raw JSON blobs\n'
-        '    # which break Claude\'s JSON output contract.\n'
-        '    conversation_history = [\n'
+        "    # Build stateful conversation history for assess_submission.j2.\n"
+        "    # Required to continue thread after off-topic turns.\n"
+        "    # NOTE: assessment and teach turns excluded — they inject raw JSON blobs\n"
+        "    # which break Claude's JSON output contract.\n"
+        "    conversation_history = [\n"
         '        {"speaker": t.get("speaker", ""), "content": t.get("content", "")}\n'
-        '        for t in (dll.current.turns if dll.current else [])\n'
+        "        for t in (dll.current.turns if dll.current else [])\n"
         '        if t.get("turn_type") in ("text_submission", "probe")\n'
         '        and t.get("content")\n'
-        '    ]\n'
-        '\n'
+        "    ]\n"
+        "\n"
     )
 
     if INJECT_ANCHOR in src:
@@ -107,14 +111,14 @@ else:
                     'FIX 7b FAILED — "candidate_answer": answer not found in render_and_call context.\n'
                     '  Run: grep -n "candidate_answer" src/competitive_programming_factory/engine/session_engine.py'
                 )
-                print('  ✗     FIX 7b FAILED — candidate_answer key not found in context dict')
+                print("  ✗     FIX 7b FAILED — candidate_answer key not found in context dict")
                 ENGINE.write_text(original)  # roll back the block insertion
     else:
         failures.append(
             'FIX 7a FAILED — render_and_call("assess_submission.j2" not found in session_engine.py.\n'
             '  Run: grep -n "assess_submission" src/competitive_programming_factory/engine/session_engine.py'
         )
-        print('  ✗     FIX 7a FAILED — assess_submission.j2 render call anchor not found')
+        print("  ✗     FIX 7a FAILED — assess_submission.j2 render call anchor not found")
 
 
 # =============================================================================
@@ -150,14 +154,16 @@ else:
             src = src.replace(old_heading, SCOPE_BLOCK + old_heading, 1)
             TEMPLATE.write_text(src)
             changes.append("FIX 8b — assess_submission.j2: SCOPE HARD LIMIT added")
-            print(f"  OK    FIX 8b — assess_submission.j2: SCOPE HARD LIMIT added (anchor: '{old_heading}')")
+            print(
+                f"  OK    FIX 8b — assess_submission.j2: SCOPE HARD LIMIT added (anchor: '{old_heading}')"
+            )
             break
     else:
         failures.append(
             'FIX 8b FAILED — neither "YOUR ASSESSMENT TASK" nor "YOUR TASK" heading found.\n'
             '  Run: grep -n "YOUR.*TASK\|━━━" src/competitive_programming_factory/templates/assess_submission.j2'
         )
-        print('  ✗     FIX 8b FAILED — task heading not found in assess_submission.j2')
+        print("  ✗     FIX 8b FAILED — task heading not found in assess_submission.j2")
 
 
 # =============================================================================

@@ -6,29 +6,38 @@ Requires teach_ask_cp_new.py in the same directory.
 Splices the fully upgraded teach_ask function body into
 src/competitive_programming_factory/routes/stages.py.
 """
-import pathlib, py_compile, tempfile, os, sys
 
-STAGES   = pathlib.Path("src/competitive_programming_factory/routes/stages.py")
+import os
+import pathlib
+import py_compile
+import sys
+import tempfile
+
+STAGES = pathlib.Path("src/competitive_programming_factory/routes/stages.py")
 NEW_FUNC = pathlib.Path("teach_ask_cp_new.py")
 
 for f in [STAGES, NEW_FUNC]:
     if not f.exists():
         sys.exit(f"ERROR: {f} not found — run from competitive-programming-factory repo root")
 
-src      = STAGES.read_text()
+src = STAGES.read_text()
 original = src
 new_body = NEW_FUNC.read_text()
 
 # ── Find teach_ask function boundaries ───────────────────────────────────────
 lines = src.splitlines(keepends=True)
 start = None
-end   = None
+end = None
 for i, line in enumerate(lines):
     if "async def teach_ask(" in line or "def teach_ask(" in line:
         start = i
-    if start is not None and i > start and (
-        line.startswith("@router")
-        or ((line.startswith("def ") or line.startswith("async def ")) and i > start + 2)
+    if (
+        start is not None
+        and i > start
+        and (
+            line.startswith("@router")
+            or ((line.startswith("def ") or line.startswith("async def ")) and i > start + 2)
+        )
     ):
         end = i
         break

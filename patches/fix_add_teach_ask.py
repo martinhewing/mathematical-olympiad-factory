@@ -50,7 +50,7 @@ Return ONLY JSON: {{"reply": "your response"}}"""
 
 '''
 
-if 'teach/ask' not in text:
+if "teach/ask" not in text:
     # insert before teach/complete
     target = '@router.post("/session/{session_id}/teach/complete")'
     if target in text:
