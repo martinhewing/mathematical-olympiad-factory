@@ -52,7 +52,6 @@ ignore = ["E501"]
 
 
 
-select = ["E", "F", "I", "UP"]
 
 [build-system]
 requires      = ["setuptools>=68"]
