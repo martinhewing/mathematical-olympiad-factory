@@ -45,8 +45,27 @@ async def transcribe(audio_bytes: bytes, content_type: str = "audio/webm") -> st
         response = await client.stt.transcribe(
             model = "ink-whisper",
             file  = audio_file,
+            language = "en",
+            timestamp_granularities = ["word"],
         )
 
     transcript = getattr(response, "text", None) or getattr(response, "transcript", None) or ""
-    log.info("stt.transcribe.complete", chars=len(transcript))
-    return transcript.strip()
+    words      = getattr(response, "words", None) or []
+    duration   = getattr(response, "duration", None)
+
+    word_count = len(words) if words else len(transcript.split())
+
+    log.info(
+        "stt.transcribe.complete",
+        chars=len(transcript),
+        word_count=word_count,
+        duration=duration,
+        has_word_timestamps=bool(words),
+    )
+
+    return {
+        "transcript": transcript.strip(),
+        "words": words,
+        "word_count": word_count,
+        "duration": duration,
+    }

@@ -204,8 +204,19 @@ async def submit_voice_answer(
     content_type = audio.content_type or "audio/mpeg"
     if len(audio_bytes) < 1000:
         raise HTTPException(status_code=422, detail="Audio too short")
-    transcript = await transcribe(audio_bytes, content_type=content_type)
-    if len(transcript.split()) < 8:
+    stt_result = await transcribe(audio_bytes, content_type=content_type)
+
+    # Structured result from upgraded STT — use word-level data for quality gating
+    if isinstance(stt_result, dict):
+        transcript = stt_result["transcript"]
+        word_count = stt_result["word_count"]
+        duration   = stt_result.get("duration")
+    else:
+        # Fallback for plain string (shouldn't happen after patch)
+        transcript = stt_result if isinstance(stt_result, str) else str(stt_result)
+        word_count = len(transcript.split())
+        duration   = None
+    if word_count < 8:
         nudge = (
             "Sorry, I didn't catch that — it sounded like the mic cut off. "
             "Take your time and answer when you're ready."
@@ -221,6 +232,23 @@ async def submit_voice_answer(
             "session_complete":      False,
             "input_mode":            "voice",
         }
+    if duration and duration < 1.0:
+        nudge = (
+            "That was very short — make sure your microphone is working "
+            "and try again."
+        )
+        return {
+            "verdict":               "PARTIAL",
+            "feedback":              nudge,
+            "probe":                 nudge,
+            "transcript":            transcript,
+            "concepts_demonstrated": [],
+            "concepts_missing":      [],
+            "next_url":              f"/session/{session_id}/stage/{stage_n}",
+            "session_complete":      False,
+            "input_mode":            "voice",
+        }
+
     if len(transcript.strip()) > 4000:
         raise HTTPException(
             status_code=422,
