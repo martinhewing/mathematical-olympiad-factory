@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """
 competitive_programming_factory/routes/voice.py
 Voice endpoints — Cartesia TTS + STT.
